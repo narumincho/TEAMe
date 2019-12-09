@@ -1,0 +1,8 @@
+.idea
+elm-stuff
+node_modules
+.firebase
+.vscode
+/client/distribution
+/server/distribution
+/server/source/lib/key.ts

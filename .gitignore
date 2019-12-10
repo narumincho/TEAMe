@@ -3,6 +3,8 @@ elm-stuff
 node_modules
 .firebase
 .vscode
+.cache
+dist
 /client/distribution
 /server/distribution
 /server/source/lib/key.ts

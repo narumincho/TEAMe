@@ -8,3 +8,4 @@ dist
 /client/distribution
 /server/distribution
 /server/source/lib/key.ts
+debugDistribution

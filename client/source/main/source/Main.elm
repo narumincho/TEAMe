@@ -1,8 +1,10 @@
 module Main exposing (main)
 
+import Api
 import Browser
 import Browser.Navigation
 import Html
+import PageLocation
 import Url
 
 
@@ -38,6 +40,10 @@ import Url
 
 type Model
     = Model
+        { accessToken : Maybe Api.AccessToken
+        , page : PageLocation.InitPageLocation
+        , navigationKey : Browser.Navigation.Key
+        }
 
 
 type Msg
@@ -58,8 +64,30 @@ main =
 
 
 init : () -> Url.Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
-init () _ _ =
-    ( Model, Cmd.none )
+init () url key =
+    let
+        ( accessTokenMaybe, initPageLocationMaybe ) =
+            PageLocation.initFromUrl url
+    in
+    case initPageLocationMaybe of
+        Just initPageLocation ->
+            ( Model
+                { accessToken = accessTokenMaybe
+                , page = initPageLocation
+                , navigationKey = key
+                }
+            , Browser.Navigation.replaceUrl key
+                (PageLocation.initToUrlAsString initPageLocation)
+            )
+
+        Nothing ->
+            ( Model
+                { accessToken = accessTokenMaybe
+                , page = PageLocation.InitMyPage
+                , navigationKey = key
+                }
+            , Browser.Navigation.replaceUrl key (PageLocation.initToUrlAsString PageLocation.InitMyPage)
+            )
 
 
 view : Model -> Browser.Document Msg

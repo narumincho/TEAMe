@@ -15,7 +15,7 @@ jobs:
       - name: Install npm dependencies (npm install)
         run: npm install
       - name: Parcel build (npx parcel)
-        run: npx parcel ./source/call/call.ts --out-dir ./distribution --out-file main.js;
+        run: npx parcel build ./source/call/call.ts --out-dir ./distribution --out-file main.js;
       - name: Move Assets
         run: mv ./source/assets ./distribution/assets
       - name: deploy firebase hosting

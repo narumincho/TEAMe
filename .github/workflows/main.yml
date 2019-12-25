@@ -1,0 +1,27 @@
+name: build and deploy hosting
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-and-deploy:
+    name: build and deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@master
+      - name: Install npm dependencies (npm install)
+        run: npm install
+      - name: Parcel build (npx parcel)
+        run: npx parcel ./source/call/call.ts --out-dir ./distribution --out-file main.js;
+      - name: Move Assets
+        run: mv ./source/assets ./distribution/assets
+      - name: deploy firebase hosting
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only hosting
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          PROJECT_ID: teame-c1a32

@@ -65,6 +65,7 @@ type LogInState
 type LogInViewModel
     = DisplayedLogInButton
     | WaitLogInUrl
+    | ErrorLogIn String
 
 
 type PageModel
@@ -176,7 +177,10 @@ update message (Model rec) =
                             )
 
 
-updateNoLogIn : Message -> { logInViewModel : LogInViewModel, pageLocation : PageLocation.PageLocation } -> ( { logInViewModel : LogInViewModel, pageLocation : PageLocation.PageLocation }, Cmd Message )
+updateNoLogIn :
+    Message
+    -> { logInViewModel : LogInViewModel, pageLocation : PageLocation.PageLocation }
+    -> ( { logInViewModel : LogInViewModel, pageLocation : PageLocation.PageLocation }, Cmd Message )
 updateNoLogIn message noLogInRecord =
     case message of
         UrlChange url ->
@@ -191,13 +195,28 @@ updateNoLogIn message noLogInRecord =
             , Api.getLineLogInUrl ResponseLineLogInUrl
             )
 
+        ResponseLineLogInUrl result ->
+            case result of
+                Ok url ->
+                    ( noLogInRecord
+                    , Browser.Navigation.load (Url.toString url)
+                    )
+
+                Err errorMessage ->
+                    ( { noLogInRecord | logInViewModel = ErrorLogIn errorMessage }
+                    , Cmd.none
+                    )
+
         _ ->
             ( noLogInRecord
             , Cmd.none
             )
 
 
-updateLogIn : Message -> { accessToken : Api.AccessToken, pageModel : PageModel } -> ( { accessToken : Api.AccessToken, pageModel : PageModel }, Cmd Message )
+updateLogIn :
+    Message
+    -> { accessToken : Api.AccessToken, pageModel : PageModel }
+    -> ( { accessToken : Api.AccessToken, pageModel : PageModel }, Cmd Message )
 updateLogIn message logInRecord =
     case ( message, logInRecord.pageModel ) of
         ( UrlChange url, _ ) ->
@@ -303,6 +322,12 @@ logInView model =
                         [ Html.Styled.div
                             []
                             [ Html.Styled.text "ログインへのURLを取得中" ]
+                        ]
+
+                    ErrorLogIn errorMessage ->
+                        [ Html.Styled.div
+                            []
+                            [ Html.Styled.text ("ログインに失敗しました。" ++ errorMessage) ]
                         ]
                )
         )

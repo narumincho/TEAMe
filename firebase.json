@@ -1,5 +1,11 @@
 {
   "hosting": {
-    "public": "client/distribution"
+    "public": "client/distribution",
+    "rewrites": [
+      {
+        "source": "**",
+        "function": "indexHtml"
+      }
+    ]
   }
 }

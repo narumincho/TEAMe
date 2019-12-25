@@ -1,11 +1,7 @@
 Write-Output "Compile Client Code And Upload Firebase Server";
 
-New-Item ./client/distribution -ItemType Directory -Force
+./node_modules/.bin/parcel.ps1 build ./source/call/call.ts --out-dir distribution --out-file main.js;
 
-Write-Output "Compile Elm ...";
+Copy-Item ./source/assets/ ./distribution/ -Recurse -Force
 
-Set-Location ./client/source/main/;
-elm make ./source/Main.elm --output ../../distribution/main.js --optimize;
-
-Write-Output "Compile Elm OK";
-
+firebase.ps1 deploy --only hosting --project teame-c1a32;

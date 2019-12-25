@@ -5,7 +5,7 @@ New-Item ./client/distribution -ItemType Directory -Force
 Write-Output "Compile Elm ...";
 
 Set-Location ./client/source/main/;
-elm make ./source/Main.elm --output ../../distribution/index.html --optimize;
+elm make ./source/Main.elm --output ../../distribution/main.js --optimize;
 
 Write-Output "Compile Elm OK";
 

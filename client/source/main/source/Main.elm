@@ -3,7 +3,10 @@ module Main exposing (main)
 import Api
 import Browser
 import Browser.Navigation
+import Css
 import Html.Styled
+import Html.Styled.Attributes
+import Html.Styled.Events
 import Page.MyPage
 import Page.Note
 import Page.Team
@@ -43,10 +46,25 @@ import Url
 
 type Model
     = Model
-        { accessToken : Maybe Api.AccessToken
-        , pageModel : PageModel
+        { logInState : LogInState
         , navigationKey : Browser.Navigation.Key
         }
+
+
+type LogInState
+    = NoLogIn
+        { logInViewModel : LogInViewModel
+        , pageLocation : PageLocation.PageLocation
+        }
+    | LogIn
+        { accessToken : Api.AccessToken
+        , pageModel : PageModel
+        }
+
+
+type LogInViewModel
+    = DisplayedLogInButton
+    | WaitLogInUrl
 
 
 type PageModel
@@ -61,6 +79,8 @@ type Message
     | MessageMyPage Page.MyPage.Message
     | MessageNote Page.Note.Message
     | MessageTeam Page.Team.Message
+    | RequestLineLogInUrl
+    | ResponseLineLogInUrl (Result String Url.Url)
 
 
 main : Program () Model Message
@@ -85,8 +105,19 @@ init () url key =
             pageLocationToInitPageModel pageLocation
     in
     ( Model
-        { accessToken = accessTokenMaybe
-        , pageModel = pageModel
+        { logInState =
+            case accessTokenMaybe of
+                Just accessToken ->
+                    LogIn
+                        { accessToken = accessToken
+                        , pageModel = pageModel
+                        }
+
+                Nothing ->
+                    NoLogIn
+                        { logInViewModel = DisplayedLogInButton
+                        , pageLocation = pageLocation
+                        }
         , navigationKey = key
         }
     , Cmd.batch
@@ -113,43 +144,10 @@ pageLocationToInitPageModel pageLocation =
                 |> Tuple.mapBoth PageTeam (always Cmd.none)
 
 
-view : Model -> Browser.Document Message
-view (Model { pageModel }) =
-    { title = "TEAMe"
-    , body =
-        [ case pageModel of
-            PageMyPage model ->
-                Page.MyPage.view model
-                    |> Html.Styled.map MessageMyPage
-
-            PageNote model ->
-                Page.Note.view model
-                    |> Html.Styled.map MessageNote
-
-            PageTeam model ->
-                Page.Team.view model
-                    |> Html.Styled.map MessageTeam
-        ]
-            |> List.map Html.Styled.toUnstyled
-    }
-
-
 update : Message -> Model -> ( Model, Cmd Message )
 update message (Model rec) =
-    case ( message, rec.pageModel ) of
-        ( UrlChange url, _ ) ->
-            let
-                ( pageModel, command ) =
-                    pageLocationToInitPageModel (PageLocation.fromUrl url)
-            in
-            ( Model
-                { rec
-                    | pageModel = pageModel
-                }
-            , command
-            )
-
-        ( UrlRequest urlRequest, _ ) ->
+    case message of
+        UrlRequest urlRequest ->
             ( Model rec
             , case urlRequest of
                 Browser.Internal url ->
@@ -159,13 +157,64 @@ update message (Model rec) =
                     Browser.Navigation.load urlString
             )
 
+        _ ->
+            case rec.logInState of
+                NoLogIn noLogInRecord ->
+                    updateNoLogIn message noLogInRecord
+                        |> Tuple.mapFirst
+                            (\newNoLogInRecord ->
+                                Model
+                                    { rec | logInState = NoLogIn newNoLogInRecord }
+                            )
+
+                LogIn logInRecord ->
+                    updateLogIn message logInRecord
+                        |> Tuple.mapFirst
+                            (\newLogInRecord ->
+                                Model
+                                    { rec | logInState = LogIn newLogInRecord }
+                            )
+
+
+updateNoLogIn : Message -> { logInViewModel : LogInViewModel, pageLocation : PageLocation.PageLocation } -> ( { logInViewModel : LogInViewModel, pageLocation : PageLocation.PageLocation }, Cmd Message )
+updateNoLogIn message noLogInRecord =
+    case message of
+        UrlChange url ->
+            ( { noLogInRecord | pageLocation = PageLocation.fromUrl url }
+            , Cmd.none
+            )
+
+        RequestLineLogInUrl ->
+            ( { noLogInRecord
+                | logInViewModel = WaitLogInUrl
+              }
+            , Api.getLineLogInUrl ResponseLineLogInUrl
+            )
+
+        _ ->
+            ( noLogInRecord
+            , Cmd.none
+            )
+
+
+updateLogIn : Message -> { accessToken : Api.AccessToken, pageModel : PageModel } -> ( { accessToken : Api.AccessToken, pageModel : PageModel }, Cmd Message )
+updateLogIn message logInRecord =
+    case ( message, logInRecord.pageModel ) of
+        ( UrlChange url, _ ) ->
+            let
+                ( pageModel, command ) =
+                    pageLocationToInitPageModel (PageLocation.fromUrl url)
+            in
+            ( { logInRecord | pageModel = pageModel }
+            , command
+            )
+
         ( MessageMyPage pageMessage, PageMyPage pageModel ) ->
             let
                 ( newMyPageModel, command ) =
                     Page.MyPage.update pageMessage pageModel
             in
-            ( Model
-                { rec | pageModel = PageMyPage newMyPageModel }
+            ( { logInRecord | pageModel = PageMyPage newMyPageModel }
             , command |> Maybe.map myPageCommandToCommand |> Maybe.withDefault Cmd.none
             )
 
@@ -174,8 +223,7 @@ update message (Model rec) =
                 ( newPageModel, command ) =
                     Page.Note.update pageMessage pageModel
             in
-            ( Model
-                { rec | pageModel = PageNote newPageModel }
+            ( { logInRecord | pageModel = PageNote newPageModel }
             , command |> Maybe.map noteCommandToCommand |> Maybe.withDefault Cmd.none
             )
 
@@ -184,13 +232,12 @@ update message (Model rec) =
                 ( newPageModel, command ) =
                     Page.Team.update pageMessage pageModel
             in
-            ( Model
-                { rec | pageModel = PageTeam newPageModel }
+            ( { logInRecord | pageModel = PageTeam newPageModel }
             , command |> Maybe.map teamCommandToCommand |> Maybe.withDefault Cmd.none
             )
 
         ( _, _ ) ->
-            ( Model rec
+            ( logInRecord
             , Cmd.none
             )
 
@@ -208,3 +255,81 @@ noteCommandToCommand _ =
 teamCommandToCommand : Page.Team.Command -> Cmd Message
 teamCommandToCommand _ =
     Cmd.none
+
+
+view : Model -> Browser.Document Message
+view (Model record) =
+    { title = "TEAMe"
+    , body =
+        [ case record.logInState of
+            NoLogIn noLogInRecord ->
+                logInView noLogInRecord.logInViewModel
+
+            LogIn logInRecord ->
+                case logInRecord.pageModel of
+                    PageMyPage model ->
+                        Page.MyPage.view model
+                            |> Html.Styled.map MessageMyPage
+
+                    PageNote model ->
+                        Page.Note.view model
+                            |> Html.Styled.map MessageNote
+
+                    PageTeam model ->
+                        Page.Team.view model
+                            |> Html.Styled.map MessageTeam
+        ]
+            |> List.map Html.Styled.toUnstyled
+    }
+
+
+logInView : LogInViewModel -> Html.Styled.Html Message
+logInView model =
+    Html.Styled.div
+        []
+        ([ Html.Styled.div
+            []
+            [ Html.Styled.text "ログイン画面" ]
+         ]
+            ++ (case model of
+                    DisplayedLogInButton ->
+                        [ Html.Styled.div
+                            []
+                            [ Html.Styled.text "TEAMeを使うにはログインが必要です" ]
+                        , lineLogInButton
+                        ]
+
+                    WaitLogInUrl ->
+                        [ Html.Styled.div
+                            []
+                            [ Html.Styled.text "ログインへのURLを取得中" ]
+                        ]
+               )
+        )
+
+
+lineLogInButton : Html.Styled.Html Message
+lineLogInButton =
+    Html.Styled.button
+        [ Html.Styled.Attributes.css
+            [ Css.backgroundColor (Css.rgb 0 195 0) ]
+        , Html.Styled.Events.onClick RequestLineLogInUrl
+        ]
+        [ Html.Styled.img
+            [ Html.Styled.Attributes.src "/assets/line-icon.png"
+            , Html.Styled.Attributes.href "LINEのロゴ"
+            , Html.Styled.Attributes.css
+                [ Css.width (Css.px 48)
+                , Css.height (Css.px 48)
+                , Css.boxSizing Css.borderBox
+                ]
+            ]
+            []
+        , Html.Styled.div
+            [ Html.Styled.Attributes.css
+                [ Css.borderLeft3 (Css.px 1) Css.solid (Css.rgb 0 179 0)
+                , Css.color (Css.rgb 255 255 255)
+                ]
+            ]
+            [ Html.Styled.text "LINEでログイン" ]
+        ]

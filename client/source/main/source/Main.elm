@@ -3,7 +3,10 @@ module Main exposing (main)
 import Api
 import Browser
 import Browser.Navigation
-import Html
+import Html.Styled
+import Page.MyPage
+import Page.Note
+import Page.Team
 import PageLocation
 import Url
 
@@ -41,62 +44,167 @@ import Url
 type Model
     = Model
         { accessToken : Maybe Api.AccessToken
-        , page : PageLocation.InitPageLocation
+        , pageModel : PageModel
         , navigationKey : Browser.Navigation.Key
         }
 
 
-type Msg
-    = OnUrlRequest Browser.UrlRequest
-    | OnUrlChange Url.Url
+type PageModel
+    = PageMyPage Page.MyPage.Model
+    | PageNote Page.Note.Model
+    | PageTeam Page.Team.Model
 
 
-main : Program () Model Msg
+type Message
+    = UrlRequest Browser.UrlRequest
+    | UrlChange Url.Url
+    | MessageMyPage Page.MyPage.Message
+    | MessageNote Page.Note.Message
+    | MessageTeam Page.Team.Message
+
+
+main : Program () Model Message
 main =
     Browser.application
         { init = init
         , view = view
         , update = update
         , subscriptions = always Sub.none
-        , onUrlChange = OnUrlChange
-        , onUrlRequest = OnUrlRequest
+        , onUrlChange = UrlChange
+        , onUrlRequest = UrlRequest
         }
 
 
-init : () -> Url.Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
+init : () -> Url.Url -> Browser.Navigation.Key -> ( Model, Cmd Message )
 init () url key =
     let
-        ( accessTokenMaybe, initPageLocationMaybe ) =
+        ( accessTokenMaybe, pageLocation ) =
             PageLocation.initFromUrl url
+
+        ( pageModel, pageCommand ) =
+            pageLocationToInitPageModel pageLocation
     in
-    case initPageLocationMaybe of
-        Just initPageLocation ->
-            ( Model
-                { accessToken = accessTokenMaybe
-                , page = initPageLocation
-                , navigationKey = key
-                }
-            , Browser.Navigation.replaceUrl key
-                (PageLocation.initToUrlAsString initPageLocation)
-            )
-
-        Nothing ->
-            ( Model
-                { accessToken = accessTokenMaybe
-                , page = PageLocation.InitMyPage
-                , navigationKey = key
-                }
-            , Browser.Navigation.replaceUrl key (PageLocation.initToUrlAsString PageLocation.InitMyPage)
-            )
+    ( Model
+        { accessToken = accessTokenMaybe
+        , pageModel = pageModel
+        , navigationKey = key
+        }
+    , Cmd.batch
+        [ Browser.Navigation.replaceUrl key
+            (PageLocation.toUrlAsString pageLocation)
+        , pageCommand
+        ]
+    )
 
 
-view : Model -> Browser.Document Msg
-view _ =
+pageLocationToInitPageModel : PageLocation.PageLocation -> ( PageModel, Cmd Message )
+pageLocationToInitPageModel pageLocation =
+    case pageLocation of
+        PageLocation.MyPage ->
+            Page.MyPage.init
+                |> Tuple.mapBoth PageMyPage (always Cmd.none)
+
+        PageLocation.Note ->
+            Page.Note.init
+                |> Tuple.mapBoth PageNote (always Cmd.none)
+
+        PageLocation.Team ->
+            Page.Team.init
+                |> Tuple.mapBoth PageTeam (always Cmd.none)
+
+
+view : Model -> Browser.Document Message
+view (Model { pageModel }) =
     { title = "TEAMe"
-    , body = [ Html.text "TEAMe" ]
+    , body =
+        [ case pageModel of
+            PageMyPage model ->
+                Page.MyPage.view model
+                    |> Html.Styled.map MessageMyPage
+
+            PageNote model ->
+                Page.Note.view model
+                    |> Html.Styled.map MessageNote
+
+            PageTeam model ->
+                Page.Team.view model
+                    |> Html.Styled.map MessageTeam
+        ]
+            |> List.map Html.Styled.toUnstyled
     }
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update _ model =
-    ( model, Cmd.none )
+update : Message -> Model -> ( Model, Cmd Message )
+update message (Model rec) =
+    case ( message, rec.pageModel ) of
+        ( UrlChange url, _ ) ->
+            let
+                ( pageModel, command ) =
+                    pageLocationToInitPageModel (PageLocation.fromUrl url)
+            in
+            ( Model
+                { rec
+                    | pageModel = pageModel
+                }
+            , command
+            )
+
+        ( UrlRequest urlRequest, _ ) ->
+            ( Model rec
+            , case urlRequest of
+                Browser.Internal url ->
+                    Browser.Navigation.pushUrl rec.navigationKey (Url.toString url)
+
+                Browser.External urlString ->
+                    Browser.Navigation.load urlString
+            )
+
+        ( MessageMyPage pageMessage, PageMyPage pageModel ) ->
+            let
+                ( newMyPageModel, command ) =
+                    Page.MyPage.update pageMessage pageModel
+            in
+            ( Model
+                { rec | pageModel = PageMyPage newMyPageModel }
+            , command |> Maybe.map myPageCommandToCommand |> Maybe.withDefault Cmd.none
+            )
+
+        ( MessageNote pageMessage, PageNote pageModel ) ->
+            let
+                ( newPageModel, command ) =
+                    Page.Note.update pageMessage pageModel
+            in
+            ( Model
+                { rec | pageModel = PageNote newPageModel }
+            , command |> Maybe.map noteCommandToCommand |> Maybe.withDefault Cmd.none
+            )
+
+        ( MessageTeam pageMessage, PageTeam pageModel ) ->
+            let
+                ( newPageModel, command ) =
+                    Page.Team.update pageMessage pageModel
+            in
+            ( Model
+                { rec | pageModel = PageTeam newPageModel }
+            , command |> Maybe.map teamCommandToCommand |> Maybe.withDefault Cmd.none
+            )
+
+        ( _, _ ) ->
+            ( Model rec
+            , Cmd.none
+            )
+
+
+myPageCommandToCommand : Page.MyPage.Command -> Cmd Message
+myPageCommandToCommand _ =
+    Cmd.none
+
+
+noteCommandToCommand : Page.Note.Command -> Cmd Message
+noteCommandToCommand _ =
+    Cmd.none
+
+
+teamCommandToCommand : Page.Team.Command -> Cmd Message
+teamCommandToCommand _ =
+    Cmd.none

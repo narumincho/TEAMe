@@ -1,4 +1,9 @@
-module PageLocation exposing (InitPageLocation(..), initFromUrl, initToUrlAsString)
+module PageLocation exposing
+    ( PageLocation(..)
+    , fromUrl
+    , initFromUrl
+    , toUrlAsString
+    )
 
 import Api
 import Dict
@@ -7,13 +12,13 @@ import Url
 import Url.Builder
 
 
-type InitPageLocation
-    = InitMyPage
-    | InitNote
-    | InitTeam
+type PageLocation
+    = MyPage
+    | Note
+    | Team
 
 
-initFromUrl : Url.Url -> ( Maybe Api.AccessToken, Maybe InitPageLocation )
+initFromUrl : Url.Url -> ( Maybe Api.AccessToken, PageLocation )
 initFromUrl url =
     let
         { path, hash } =
@@ -28,10 +33,31 @@ initFromUrl url =
     ( fragmentDict
         |> Dict.get "accessToken"
         |> Maybe.map Api.AccessToken
-    , [ myPageParser |> parserMap (always InitMyPage) ]
+    , [ myPageParser |> parserMap (always MyPage)
+      , noteParser |> parserMap (always Note)
+      , teamParser |> parserMap (always Team)
+      ]
         |> List.map (\f -> f path)
         |> oneOf
+        |> Maybe.withDefault MyPage
     )
+
+
+fromUrl : Url.Url -> PageLocation
+fromUrl url =
+    let
+        { path, hash } =
+            url
+                |> Url.toString
+                |> Erl.parse
+    in
+    [ myPageParser |> parserMap (always MyPage)
+    , noteParser |> parserMap (always Note)
+    , teamParser |> parserMap (always Team)
+    ]
+        |> List.map (\f -> f path)
+        |> oneOf
+        |> Maybe.withDefault MyPage
 
 
 parserMap : (a -> b) -> (List String -> Maybe a) -> (List String -> Maybe b)
@@ -54,16 +80,16 @@ oneOf list =
 
 {-| ページの場所から、文字列で表現したURLに変換する。一方通行のページの場合、ホームのURLを返す
 -}
-initToUrlAsString : InitPageLocation -> String
-initToUrlAsString location =
+toUrlAsString : PageLocation -> String
+toUrlAsString location =
     case location of
-        InitMyPage ->
+        MyPage ->
             Url.Builder.absolute myPagePath []
 
-        InitNote ->
+        Note ->
             Url.Builder.absolute notePath []
 
-        InitTeam ->
+        Team ->
             Url.Builder.absolute teamPath []
 
 

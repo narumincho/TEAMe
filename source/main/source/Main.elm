@@ -337,24 +337,41 @@ lineLogInButton : Html.Styled.Html Message
 lineLogInButton =
     Html.Styled.button
         [ Html.Styled.Attributes.css
-            [ Css.backgroundColor (Css.rgb 0 195 0) ]
+            [ Css.backgroundColor (Css.rgb 0 195 0)
+            , Css.border2 Css.zero Css.none
+            , Css.borderRadius (Css.px 8)
+            , Css.padding Css.zero
+            , Css.width (Css.pct 100)
+            , Css.cursor Css.pointer
+            ]
         , Html.Styled.Events.onClick RequestLineLogInUrl
         ]
-        [ Html.Styled.img
-            [ Html.Styled.Attributes.src "/assets/line-icon.png"
-            , Html.Styled.Attributes.href "LINEのロゴ"
-            , Html.Styled.Attributes.css
-                [ Css.width (Css.px 48)
-                , Css.height (Css.px 48)
-                , Css.boxSizing Css.borderBox
-                ]
-            ]
-            []
-        , Html.Styled.div
+        [ Html.Styled.div
             [ Html.Styled.Attributes.css
-                [ Css.borderLeft3 (Css.px 1) Css.solid (Css.rgb 0 179 0)
-                , Css.color (Css.rgb 255 255 255)
+                [ Css.property "display" "grid"
+                , Css.property "grid-auto-flow" "column"
+                , Css.property "grid-template-columns" "max-content 1fr"
+                , Css.alignItems Css.center
                 ]
             ]
-            [ Html.Styled.text "LINEでログイン" ]
+            [ Html.Styled.img
+                [ Html.Styled.Attributes.src "/assets/line-icon.png"
+                , Html.Styled.Attributes.href "LINEのロゴ"
+                , Html.Styled.Attributes.css
+                    [ Css.width (Css.px 97)
+                    , Css.height (Css.px 96)
+                    , Css.boxSizing Css.borderBox
+                    , Css.borderRight3 (Css.px 1) Css.solid (Css.rgb 0 179 0)
+                    ]
+                ]
+                []
+            , Html.Styled.div
+                [ Html.Styled.Attributes.css
+                    [ Css.color (Css.rgb 255 255 255)
+                    , Css.padding (Css.px 8)
+                    , Css.fontSize (Css.rem 1.5)
+                    ]
+                ]
+                [ Html.Styled.text "LINEでログイン" ]
+            ]
         ]

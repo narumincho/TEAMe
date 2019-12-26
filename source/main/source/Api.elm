@@ -67,7 +67,7 @@ type GraphQLValue
 graphQlApiRequest : Query -> Jd.Decoder a -> (Result String a -> msg) -> Cmd.Cmd msg
 graphQlApiRequest query responseDecoder callBack =
     Http.post
-        { url = "https://asia-northeast1-teame-c1a32.cloudfunctions.net/api"
+        { url = "https://us-central1-teame-c1a32.cloudfunctions.net/api"
         , body = graphQlRequestBody (queryToString query)
         , expect = Http.expectStringResponse callBack (graphQlResponseDecoder responseDecoder)
         }

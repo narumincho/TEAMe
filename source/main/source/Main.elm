@@ -192,7 +192,7 @@ updateNoLogIn message noLogInRecord =
             ( { noLogInRecord
                 | logInViewModel = WaitLogInUrl
               }
-            , Api.getLineLogInUrl ResponseLineLogInUrl
+            , Api.getLineLogInUrl (PageLocation.toUrlAsString noLogInRecord.pageLocation) ResponseLineLogInUrl
             )
 
         ResponseLineLogInUrl result ->

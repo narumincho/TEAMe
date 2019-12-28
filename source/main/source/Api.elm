@@ -10,13 +10,15 @@ type AccessToken
     = AccessToken String
 
 
-getLineLogInUrl : (Result String Url.Url -> msg) -> Cmd msg
-getLineLogInUrl =
+getLineLogInUrl : String -> (Result String Url.Url -> msg) -> Cmd msg
+getLineLogInUrl path =
     graphQlApiRequest
         (Mutation
             [ Field
                 { name = "getLineLogInUrl"
-                , args = []
+                , args =
+                    [ ( "path", GraphQLString path )
+                    ]
                 , return = []
                 }
             ]

@@ -1,0 +1,15 @@
+{
+  "name": "TEAMe デジタル練習ノート",
+  "short_name": "TEAMe",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#a7d86e",
+  "description": "TEAMe デジタル練習ノート",
+  "icons": [
+    {
+      "src": "/assets/icon.png",
+      "sizes": "256x256",
+      "type": "image/png"
+    }
+  ]
+}

@@ -356,7 +356,7 @@ lineLogInButton =
             ]
             [ Html.Styled.img
                 [ Html.Styled.Attributes.src "/assets/line-icon.png"
-                , Html.Styled.Attributes.href "LINEのロゴ"
+                , Html.Styled.Attributes.alt "LINEのロゴ"
                 , Html.Styled.Attributes.css
                     [ Css.width (Css.px 97)
                     , Css.height (Css.px 96)

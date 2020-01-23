@@ -1,7 +1,6 @@
 module Main exposing (main)
 
 import Api.Mutation
-import Api.Scalar
 import Browser
 import Browser.Navigation
 import Css
@@ -57,18 +56,48 @@ type Model
     = Model
         { logInState : LogInState
         , navigationKey : Browser.Navigation.Key
+        , messageList : List String
         }
 
 
 type LogInState
-    = NoLogIn
-        { logInViewModel : LogInViewModel
-        , pageLocation : PageLocation.PageLocation
-        }
-    | LogIn
-        { accessToken : Data.AccessToken
-        , pageModel : PageModel
-        }
+    = NoLogIn NoLogInData
+    | WaitUser WaitUserData
+    | NotSelectedRole NotSelectedRoleData
+    | ManagerLogIn ManagerLogInData
+    | PlayerLogIn PlayerLogInData
+
+
+type alias NoLogInData =
+    { logInViewModel : LogInViewModel
+    , pageLocation : PageLocation.PageLocation
+    }
+
+
+type alias WaitUserData =
+    { accessToken : Data.AccessToken
+    , pageLocation : PageLocation.PageLocation
+    }
+
+
+type alias NotSelectedRoleData =
+    { accessToken : Data.AccessToken
+    , userData : Data.NoRoleUser
+    }
+
+
+type alias ManagerLogInData =
+    { accessToken : Data.AccessToken
+    , userData : Data.Manager
+    , pageModel : PageModel
+    }
+
+
+type alias PlayerLogInData =
+    { accessToken : Data.AccessToken
+    , userData : Data.Player
+    , pageModel : PageModel
+    }
 
 
 type LogInViewModel
@@ -91,6 +120,7 @@ type Message
     | MessageTeam Page.Team.Message
     | RequestLineLogInUrl
     | ResponseLineLogInUrl (Result (Graphql.Http.Error String) String)
+    | ResponseUserData (Result (Graphql.Http.Error Data.UserData) Data.UserData)
 
 
 main : Program () Model Message
@@ -110,17 +140,14 @@ init () url key =
     let
         ( accessTokenMaybe, pageLocation ) =
             PageLocation.initFromUrl url
-
-        ( pageModel, pageCommand ) =
-            pageLocationToInitPageModel pageLocation
     in
     ( Model
         { logInState =
             case accessTokenMaybe of
                 Just accessToken ->
-                    LogIn
+                    WaitUser
                         { accessToken = accessToken
-                        , pageModel = pageModel
+                        , pageLocation = pageLocation
                         }
 
                 Nothing ->
@@ -129,12 +156,22 @@ init () url key =
                         , pageLocation = pageLocation
                         }
         , navigationKey = key
+        , messageList = []
         }
     , Cmd.batch
-        [ Browser.Navigation.replaceUrl key
+        ([ Browser.Navigation.replaceUrl key
             (PageLocation.toUrlAsString pageLocation)
-        , pageCommand
-        ]
+         ]
+            ++ (case accessTokenMaybe of
+                    Just accessToken ->
+                        [ Graphql.Http.queryRequest apiUrl (Data.getUserData accessToken)
+                            |> Graphql.Http.send ResponseUserData
+                        ]
+
+                    Nothing ->
+                        []
+               )
+        )
     )
 
 
@@ -177,19 +214,63 @@ update message (Model rec) =
                                     { rec | logInState = NoLogIn newNoLogInRecord }
                             )
 
-                LogIn logInRecord ->
-                    updateLogIn message logInRecord
-                        |> Tuple.mapFirst
-                            (\newLogInRecord ->
-                                Model
-                                    { rec | logInState = LogIn newLogInRecord }
-                            )
+                WaitUser waitUserDataRecord ->
+                    let
+                        ( newLogInState, newMessageList, cmd ) =
+                            updateWaitUserData message waitUserDataRecord
+                    in
+                    ( Model
+                        { rec
+                            | logInState = newLogInState
+                            , messageList = rec.messageList ++ newMessageList
+                        }
+                    , cmd
+                    )
+
+                NotSelectedRole notSelectedRoleData ->
+                    let
+                        ( newLogInState, newMessageList, cmd ) =
+                            updateNoSelectedRole message notSelectedRoleData
+                    in
+                    ( Model
+                        { rec
+                            | logInState = newLogInState
+                            , messageList = rec.messageList ++ newMessageList
+                        }
+                    , cmd
+                    )
+
+                ManagerLogIn managerData ->
+                    let
+                        ( newManagerLogInData, newMessageList, cmd ) =
+                            updateManager message managerData
+                    in
+                    ( Model
+                        { rec
+                            | logInState = ManagerLogIn newManagerLogInData
+                            , messageList = rec.messageList ++ newMessageList
+                        }
+                    , cmd
+                    )
+
+                PlayerLogIn playerData ->
+                    let
+                        ( newPlayerData, newMessageList, cmd ) =
+                            updatePlayer message playerData
+                    in
+                    ( Model
+                        { rec
+                            | logInState = PlayerLogIn newPlayerData
+                            , messageList = rec.messageList ++ newMessageList
+                        }
+                    , cmd
+                    )
 
 
 updateNoLogIn :
     Message
-    -> { logInViewModel : LogInViewModel, pageLocation : PageLocation.PageLocation }
-    -> ( { logInViewModel : LogInViewModel, pageLocation : PageLocation.PageLocation }, Cmd Message )
+    -> NoLogInData
+    -> ( NoLogInData, Cmd Message )
 updateNoLogIn message noLogInRecord =
     case message of
         UrlChange url ->
@@ -227,11 +308,28 @@ updateNoLogIn message noLogInRecord =
             )
 
 
-updateLogIn :
+updateWaitUserData : Message -> WaitUserData -> ( LogInState, List String, Cmd Message )
+updateWaitUserData message waitUserData =
+    case message of
+        ResponseUserData userData ->
+            ( WaitUser waitUserData, [], Cmd.none )
+
+        _ ->
+            ( WaitUser waitUserData, [], Cmd.none )
+
+
+updateNoSelectedRole : Message -> NotSelectedRoleData -> ( LogInState, List String, Cmd Message )
+updateNoSelectedRole message notSelectedRoleData =
+    case message of
+        _ ->
+            ( NotSelectedRole notSelectedRoleData, [], Cmd.none )
+
+
+updateManager :
     Message
-    -> { accessToken : Data.AccessToken, pageModel : PageModel }
-    -> ( { accessToken : Data.AccessToken, pageModel : PageModel }, Cmd Message )
-updateLogIn message logInRecord =
+    -> ManagerLogInData
+    -> ( ManagerLogInData, List String, Cmd Message )
+updateManager message logInRecord =
     case ( message, logInRecord.pageModel ) of
         ( UrlChange url, _ ) ->
             let
@@ -239,6 +337,7 @@ updateLogIn message logInRecord =
                     pageLocationToInitPageModel (PageLocation.fromUrl url)
             in
             ( { logInRecord | pageModel = pageModel }
+            , []
             , command
             )
 
@@ -248,6 +347,7 @@ updateLogIn message logInRecord =
                     Page.MyPage.update pageMessage pageModel
             in
             ( { logInRecord | pageModel = PageMyPage newMyPageModel }
+            , []
             , command |> Maybe.map myPageCommandToCommand |> Maybe.withDefault Cmd.none
             )
 
@@ -257,6 +357,7 @@ updateLogIn message logInRecord =
                     Page.Note.update pageMessage pageModel
             in
             ( { logInRecord | pageModel = PageNote newPageModel }
+            , []
             , command |> Maybe.map noteCommandToCommand |> Maybe.withDefault Cmd.none
             )
 
@@ -266,13 +367,22 @@ updateLogIn message logInRecord =
                     Page.Team.update pageMessage pageModel
             in
             ( { logInRecord | pageModel = PageTeam newPageModel }
+            , []
             , command |> Maybe.map teamCommandToCommand |> Maybe.withDefault Cmd.none
             )
 
         ( _, _ ) ->
             ( logInRecord
+            , []
             , Cmd.none
             )
+
+
+updatePlayer : Message -> PlayerLogInData -> ( PlayerLogInData, List String, Cmd Message )
+updatePlayer message playerLogInData =
+    case message of
+        _ ->
+            ( playerLogInData, [], Cmd.none )
 
 
 myPageCommandToCommand : Page.MyPage.Command -> Cmd Message
@@ -298,19 +408,17 @@ view (Model record) =
             NoLogIn noLogInRecord ->
                 logInView noLogInRecord.logInViewModel
 
-            LogIn logInRecord ->
-                case logInRecord.pageModel of
-                    PageMyPage model ->
-                        Page.MyPage.view model
-                            |> Html.Styled.map MessageMyPage
+            WaitUser waitUserData ->
+                Html.Styled.text "ユーザーの情報を取得中…"
 
-                    PageNote model ->
-                        Page.Note.view model
-                            |> Html.Styled.map MessageNote
+            NotSelectedRole notSelectedRoleData ->
+                Html.Styled.text "はじまして、最初に 監督か 選手かを選んでください"
 
-                    PageTeam model ->
-                        Page.Team.view model
-                            |> Html.Styled.map MessageTeam
+            ManagerLogIn managerLogInData ->
+                Html.Styled.text "監督の画面"
+
+            PlayerLogIn playerLogInData ->
+                Html.Styled.text "選手の画面"
         ]
             |> List.map Html.Styled.toUnstyled
     }

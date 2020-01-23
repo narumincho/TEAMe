@@ -1,9 +1,13 @@
 module Main exposing (main)
 
-import Api
+import Api.Mutation
+import Api.Scalar
 import Browser
 import Browser.Navigation
 import Css
+import Data
+import Graphql.Http
+import Graphql.SelectionSet
 import Html.Styled
 import Html.Styled.Attributes
 import Html.Styled.Events
@@ -44,6 +48,11 @@ import Url
 -}
 
 
+apiUrl : String
+apiUrl =
+    "https://us-central1-teame-c1a32.cloudfunctions.net/api"
+
+
 type Model
     = Model
         { logInState : LogInState
@@ -57,7 +66,7 @@ type LogInState
         , pageLocation : PageLocation.PageLocation
         }
     | LogIn
-        { accessToken : Api.AccessToken
+        { accessToken : Data.AccessToken
         , pageModel : PageModel
         }
 
@@ -81,7 +90,7 @@ type Message
     | MessageNote Page.Note.Message
     | MessageTeam Page.Team.Message
     | RequestLineLogInUrl
-    | ResponseLineLogInUrl (Result String Url.Url)
+    | ResponseLineLogInUrl (Result (Graphql.Http.Error Url.Url) Api.Scalar.Url)
 
 
 main : Program () Model Message
@@ -192,7 +201,11 @@ updateNoLogIn message noLogInRecord =
             ( { noLogInRecord
                 | logInViewModel = WaitLogInUrl
               }
-            , Api.getLineLogInUrl (PageLocation.toUrlAsString noLogInRecord.pageLocation) ResponseLineLogInUrl
+            , Graphql.Http.mutationRequest apiUrl
+                (Api.Mutation.getLineLogInUrl
+                    { path = PageLocation.toUrlAsString noLogInRecord.pageLocation }
+                )
+                |> Graphql.Http.send ResponseLineLogInUrl
             )
 
         ResponseLineLogInUrl result ->
@@ -215,8 +228,8 @@ updateNoLogIn message noLogInRecord =
 
 updateLogIn :
     Message
-    -> { accessToken : Api.AccessToken, pageModel : PageModel }
-    -> ( { accessToken : Api.AccessToken, pageModel : PageModel }, Cmd Message )
+    -> { accessToken : Data.AccessToken, pageModel : PageModel }
+    -> ( { accessToken : Data.AccessToken, pageModel : PageModel }, Cmd Message )
 updateLogIn message logInRecord =
     case ( message, logInRecord.pageModel ) of
         ( UrlChange url, _ ) ->

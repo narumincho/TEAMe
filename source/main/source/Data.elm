@@ -1,4 +1,12 @@
-module Data exposing (AccessToken, FileHash, codecForGraphQlScalaValue, fileHashToUrlAsString)
+module Data exposing
+    ( AccessToken
+    , FileHash
+    , accessTokenFromString
+    , fileHashFromGraphQLScalaValue
+    , fileHashToUrlAsString
+    , timePosixFromGraphQLScalaValue
+    , urlAsStringFromGraphQLScalaValue
+    )
 
 import Api.Scalar
 import Graphql.Codec
@@ -16,34 +24,26 @@ type FileHash
     = FileHash String
 
 
+accessTokenFromString : String -> AccessToken
+accessTokenFromString =
+    AccessToken
+
+
 fileHashToUrlAsString : FileHash -> String
 fileHashToUrlAsString (FileHash path) =
     "https://us-central1-teame-c1a32.cloudfunctions.net/file/" ++ path
 
 
-codecForGraphQlScalaValue : Api.Scalar.Codecs Time.Posix FileHash Url.Url
-codecForGraphQlScalaValue =
-    Api.Scalar.defineCodecs
-        { codecDateTime =
-            { encoder = \timePosix -> Json.Encode.int (Time.posixToMillis timePosix)
-            , decoder = Json.Decode.int |> Json.Decode.map Time.millisToPosix
-            }
-        , codecFileHash =
-            { encoder = \(FileHash path) -> Json.Encode.string path
-            , decoder = Json.Decode.string |> Json.Decode.map FileHash
-            }
-        , codecUrl =
-            { encoder = \url -> Json.Encode.string (Url.toString url)
-            , decoder =
-                Json.Decode.string
-                    |> Json.Decode.andThen
-                        (\urlAsString ->
-                            case Url.fromString urlAsString of
-                                Just url ->
-                                    Json.Decode.succeed url
+timePosixFromGraphQLScalaValue : Api.Scalar.DateTime -> Time.Posix
+timePosixFromGraphQLScalaValue (Api.Scalar.DateTime value) =
+    value |> String.toInt |> Maybe.withDefault 0 |> Time.millisToPosix
 
-                                Nothing ->
-                                    Json.Decode.fail ("url (" ++ urlAsString ++ ") is invalid.")
-                        )
-            }
-        }
+
+fileHashFromGraphQLScalaValue : Api.Scalar.FileHash -> FileHash
+fileHashFromGraphQLScalaValue (Api.Scalar.FileHash hash) =
+    FileHash hash
+
+
+urlAsStringFromGraphQLScalaValue : Api.Scalar.Url -> String
+urlAsStringFromGraphQLScalaValue (Api.Scalar.Url url) =
+    url

@@ -90,7 +90,7 @@ type Message
     | MessageNote Page.Note.Message
     | MessageTeam Page.Team.Message
     | RequestLineLogInUrl
-    | ResponseLineLogInUrl (Result (Graphql.Http.Error Url.Url) Api.Scalar.Url)
+    | ResponseLineLogInUrl (Result (Graphql.Http.Error String) String)
 
 
 main : Program () Model Message
@@ -204,6 +204,7 @@ updateNoLogIn message noLogInRecord =
             , Graphql.Http.mutationRequest apiUrl
                 (Api.Mutation.getLineLogInUrl
                     { path = PageLocation.toUrlAsString noLogInRecord.pageLocation }
+                    |> Graphql.SelectionSet.map Data.urlAsStringFromGraphQLScalaValue
                 )
                 |> Graphql.Http.send ResponseLineLogInUrl
             )
@@ -212,11 +213,11 @@ updateNoLogIn message noLogInRecord =
             case result of
                 Ok url ->
                     ( noLogInRecord
-                    , Browser.Navigation.load (Url.toString url)
+                    , Browser.Navigation.load url
                     )
 
                 Err errorMessage ->
-                    ( { noLogInRecord | logInViewModel = ErrorLogIn errorMessage }
+                    ( { noLogInRecord | logInViewModel = ErrorLogIn "エラー" }
                     , Cmd.none
                     )
 

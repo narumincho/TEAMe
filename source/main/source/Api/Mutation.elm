@@ -8,6 +8,7 @@ import Api.InputObject
 import Api.Interface
 import Api.Object
 import Api.Scalar
+import Api.ScalarCodecs
 import Api.Union
 import Graphql.Internal.Builder.Argument as Argument exposing (Argument)
 import Graphql.Internal.Builder.Object as Object
@@ -16,7 +17,6 @@ import Graphql.Operation exposing (RootMutation, RootQuery, RootSubscription)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode exposing (Decoder)
-import ScalarCodecs
 
 
 type alias GetLineLogInUrlRequiredArguments =
@@ -28,6 +28,6 @@ type alias GetLineLogInUrlRequiredArguments =
   - path - ログインして返ってくるURLのパス
 
 -}
-getLineLogInUrl : GetLineLogInUrlRequiredArguments -> SelectionSet ScalarCodecs.Url RootMutation
+getLineLogInUrl : GetLineLogInUrlRequiredArguments -> SelectionSet Api.ScalarCodecs.Url RootMutation
 getLineLogInUrl requiredArgs =
-    Object.selectionForField "ScalarCodecs.Url" "getLineLogInUrl" [ Argument.required "path" requiredArgs.path Encode.string ] (ScalarCodecs.codecs |> Api.Scalar.unwrapCodecs |> .codecUrl |> .decoder)
+    Object.selectionForField "ScalarCodecs.Url" "getLineLogInUrl" [ Argument.required "path" requiredArgs.path Encode.string ] (Api.ScalarCodecs.codecs |> Api.Scalar.unwrapCodecs |> .codecUrl |> .decoder)

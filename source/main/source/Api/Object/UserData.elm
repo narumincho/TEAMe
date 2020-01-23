@@ -9,6 +9,7 @@ import Api.InputObject
 import Api.Interface
 import Api.Object
 import Api.Scalar
+import Api.ScalarCodecs
 import Api.Union
 import Graphql.Internal.Builder.Argument as Argument exposing (Argument)
 import Graphql.Internal.Builder.Object as Object
@@ -17,7 +18,6 @@ import Graphql.Operation exposing (RootMutation, RootQuery, RootSubscription)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
-import ScalarCodecs
 
 
 {-| ユーザー識別するためのID
@@ -36,9 +36,9 @@ name =
 
 {-| ユーザーのプロフィール画像のファイルハッシュ
 -}
-imageFileHash : SelectionSet ScalarCodecs.FileHash Api.Object.UserData
+imageFileHash : SelectionSet Api.ScalarCodecs.FileHash Api.Object.UserData
 imageFileHash =
-    Object.selectionForField "ScalarCodecs.FileHash" "imageFileHash" [] (ScalarCodecs.codecs |> Api.Scalar.unwrapCodecs |> .codecFileHash |> .decoder)
+    Object.selectionForField "ScalarCodecs.FileHash" "imageFileHash" [] (Api.ScalarCodecs.codecs |> Api.Scalar.unwrapCodecs |> .codecFileHash |> .decoder)
 
 
 {-| ユーザーの役割
@@ -50,6 +50,6 @@ role =
 
 {-| ユーザーが作られた日時
 -}
-createdAt : SelectionSet ScalarCodecs.DateTime Api.Object.UserData
+createdAt : SelectionSet Api.ScalarCodecs.DateTime Api.Object.UserData
 createdAt =
-    Object.selectionForField "ScalarCodecs.DateTime" "createdAt" [] (ScalarCodecs.codecs |> Api.Scalar.unwrapCodecs |> .codecDateTime |> .decoder)
+    Object.selectionForField "ScalarCodecs.DateTime" "createdAt" [] (Api.ScalarCodecs.codecs |> Api.Scalar.unwrapCodecs |> .codecDateTime |> .decoder)

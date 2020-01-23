@@ -4,15 +4,7 @@
 
 module Api.VerifyScalarCodecs exposing (..)
 
-{-
-   This file is intended to be used to ensure that custom scalar decoder
-   files are valid. It is compiled using `elm make` by the CLI.
--}
 
-import Api.Scalar
-import ScalarCodecs
-
-
-verify : Api.Scalar.Codecs ScalarCodecs.DateTime ScalarCodecs.FileHash ScalarCodecs.Url
-verify =
-    ScalarCodecs.codecs
+placeholder : String
+placeholder =
+    ""

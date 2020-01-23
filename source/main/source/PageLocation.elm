@@ -5,7 +5,7 @@ module PageLocation exposing
     , toUrlAsString
     )
 
-import Api
+import Data
 import Dict
 import Erl
 import Url
@@ -18,7 +18,7 @@ type PageLocation
     | Team
 
 
-initFromUrl : Url.Url -> ( Maybe Api.AccessToken, PageLocation )
+initFromUrl : Url.Url -> ( Maybe Data.AccessToken, PageLocation )
 initFromUrl url =
     let
         { path, hash } =
@@ -32,7 +32,7 @@ initFromUrl url =
     in
     ( fragmentDict
         |> Dict.get "accessToken"
-        |> Maybe.map Api.AccessToken
+        |> Maybe.map Data.accessTokenFromString
     , [ myPageParser |> parserMap (always MyPage)
       , noteParser |> parserMap (always Note)
       , teamParser |> parserMap (always Team)

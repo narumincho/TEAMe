@@ -1,1 +1,1 @@
-npx.ps1 elm-graphql https://us-central1-teame-c1a32.cloudfunctions.net/api --base Api --output source/main/source --scalar-codecs ScalarCodecs
+npx.ps1 elm-graphql https://us-central1-teame-c1a32.cloudfunctions.net/api --base Api --output source/main/source;

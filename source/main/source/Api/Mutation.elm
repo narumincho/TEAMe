@@ -31,3 +31,37 @@ type alias GetLineLogInUrlRequiredArguments =
 getLineLogInUrl : GetLineLogInUrlRequiredArguments -> SelectionSet Api.ScalarCodecs.Url RootMutation
 getLineLogInUrl requiredArgs =
     Object.selectionForField "ScalarCodecs.Url" "getLineLogInUrl" [ Argument.required "path" requiredArgs.path Encode.string ] (Api.ScalarCodecs.codecs |> Api.Scalar.unwrapCodecs |> .codecUrl |> .decoder)
+
+
+type alias CreateTeamAndSetManagerRoleRequiredArguments =
+    { accessToken : String
+    , teamName : String
+    }
+
+
+{-| 監督としてチームを登録する
+
+  - accessToken - アクセストークン
+  - teamName - チーム名
+
+-}
+createTeamAndSetManagerRole : CreateTeamAndSetManagerRoleRequiredArguments -> SelectionSet decodesTo Api.Object.UserData -> SelectionSet decodesTo RootMutation
+createTeamAndSetManagerRole requiredArgs object_ =
+    Object.selectionForCompositeField "createTeamAndSetManagerRole" [ Argument.required "accessToken" requiredArgs.accessToken Encode.string, Argument.required "teamName" requiredArgs.teamName Encode.string ] object_ identity
+
+
+type alias JoinTeamAndSetPlayerRoleRequiredArguments =
+    { accessToken : String
+    , teamId : String
+    }
+
+
+{-| 選手としてチームに参加する
+
+  - accessToken - アクセストークン
+  - teamId - チームID
+
+-}
+joinTeamAndSetPlayerRole : JoinTeamAndSetPlayerRoleRequiredArguments -> SelectionSet decodesTo Api.Object.Team -> SelectionSet decodesTo RootMutation
+joinTeamAndSetPlayerRole requiredArgs object_ =
+    Object.selectionForCompositeField "joinTeamAndSetPlayerRole" [ Argument.required "accessToken" requiredArgs.accessToken Encode.string, Argument.required "teamId" requiredArgs.teamId Encode.string ] object_ identity

@@ -1,5 +1,6 @@
 module Main exposing (main)
 
+import Api.Enum.Role
 import Api.Mutation
 import Browser
 import Browser.Navigation
@@ -80,10 +81,20 @@ type alias WaitUserData =
     }
 
 
-type alias NotSelectedRoleData =
-    { accessToken : Data.AccessToken
-    , userData : Data.NoRoleUser
-    }
+type NotSelectedRoleData
+    = NotSelectedRoleData
+        { accessToken : Data.AccessToken
+        , userData : Data.NoRoleUser
+        }
+    | NotSelectedRoleDataSelectManager
+        { accessToken : Data.AccessToken
+        , userData : Data.NoRoleUser
+        }
+    | NotSelectedRoleDataSelectPlayer
+        { accessToken : Data.AccessToken
+        , userData : Data.NoRoleUser
+        , teamList : Maybe (List Data.TeamData)
+        }
 
 
 type alias ManagerLogInData =
@@ -121,6 +132,8 @@ type Message
     | RequestLineLogInUrl
     | ResponseLineLogInUrl (Result (Graphql.Http.Error String) String)
     | ResponseUserData (Result (Graphql.Http.Error Data.UserData) Data.UserData)
+    | SelectRole Api.Enum.Role.Role
+    | AllTeamResponse (Result (Graphql.Http.Error (List Data.TeamData)) (List Data.TeamData))
 
 
 main : Program () Model Message
@@ -311,8 +324,51 @@ updateNoLogIn message noLogInRecord =
 updateWaitUserData : Message -> WaitUserData -> ( LogInState, List String, Cmd Message )
 updateWaitUserData message waitUserData =
     case message of
-        ResponseUserData userData ->
-            ( WaitUser waitUserData, [], Cmd.none )
+        ResponseUserData userDataResult ->
+            case userDataResult of
+                Ok userData ->
+                    case userData of
+                        Data.NoRole noRoleUser ->
+                            ( NotSelectedRole
+                                (NotSelectedRoleDataSelectManager
+                                    { accessToken = waitUserData.accessToken
+                                    , userData = noRoleUser
+                                    }
+                                )
+                            , []
+                            , Cmd.none
+                            )
+
+                        Data.RoleManager manager ->
+                            let
+                                ( pageModel, command ) =
+                                    pageLocationToInitPageModel waitUserData.pageLocation
+                            in
+                            ( ManagerLogIn
+                                { accessToken = waitUserData.accessToken
+                                , userData = manager
+                                , pageModel = pageModel
+                                }
+                            , [ "監督としてログイン成功!" ]
+                            , command
+                            )
+
+                        Data.RolePlayer player ->
+                            let
+                                ( pageModel, command ) =
+                                    pageLocationToInitPageModel waitUserData.pageLocation
+                            in
+                            ( PlayerLogIn
+                                { accessToken = waitUserData.accessToken
+                                , userData = player
+                                , pageModel = pageModel
+                                }
+                            , [ "選手としてログイン成功!" ]
+                            , command
+                            )
+
+                Err _ ->
+                    ( WaitUser waitUserData, [ "ユーザーの情報取得に失敗" ], Cmd.none )
 
         _ ->
             ( WaitUser waitUserData, [], Cmd.none )
@@ -320,9 +376,47 @@ updateWaitUserData message waitUserData =
 
 updateNoSelectedRole : Message -> NotSelectedRoleData -> ( LogInState, List String, Cmd Message )
 updateNoSelectedRole message notSelectedRoleData =
-    case message of
-        _ ->
-            ( NotSelectedRole notSelectedRoleData, [], Cmd.none )
+    case ( message, notSelectedRoleData ) of
+        ( SelectRole role, NotSelectedRoleData record ) ->
+            case role of
+                Api.Enum.Role.Manager ->
+                    ( NotSelectedRole (NotSelectedRoleDataSelectManager record)
+                    , []
+                    , Cmd.none
+                    )
+
+                Api.Enum.Role.Player ->
+                    ( NotSelectedRole
+                        (NotSelectedRoleDataSelectPlayer
+                            { accessToken = record.accessToken
+                            , userData = record.userData
+                            , teamList = Nothing
+                            }
+                        )
+                    , []
+                    , Graphql.Http.queryRequest apiUrl Data.getAllTeam
+                        |> Graphql.Http.send AllTeamResponse
+                    )
+
+        ( AllTeamResponse allTeamResult, NotSelectedRoleDataSelectPlayer record ) ->
+            case allTeamResult of
+                Ok allTeam ->
+                    ( NotSelectedRole (NotSelectedRoleDataSelectPlayer { record | teamList = Just allTeam })
+                    , []
+                    , Cmd.none
+                    )
+
+                Err _ ->
+                    ( NotSelectedRole (NotSelectedRoleDataSelectPlayer record)
+                    , [ "チームの一覧取得に失敗" ]
+                    , Cmd.none
+                    )
+
+        ( _, _ ) ->
+            ( NotSelectedRole notSelectedRoleData
+            , [ "チームの一覧取得に失敗" ]
+            , Cmd.none
+            )
 
 
 updateManager :
@@ -412,7 +506,17 @@ view (Model record) =
                 Html.Styled.text "ユーザーの情報を取得中…"
 
             NotSelectedRole notSelectedRoleData ->
-                Html.Styled.text "はじまして、最初に 監督か 選手かを選んでください"
+                Html.Styled.div
+                    []
+                    [ Html.Styled.text "はじまして、最初に 監督か 選手かを選んでください"
+                    , Html.Styled.button
+                        [ Html.Styled.Events.onClick (SelectRole Api.Enum.Role.Manager)
+                        ]
+                        [ Html.Styled.text "監督" ]
+                    , Html.Styled.button
+                        [ Html.Styled.Events.onClick (SelectRole Api.Enum.Role.Player) ]
+                        [ Html.Styled.text "選手" ]
+                    ]
 
             ManagerLogIn managerLogInData ->
                 Html.Styled.text "監督の画面"

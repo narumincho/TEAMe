@@ -5,5 +5,9 @@
 module Api.Object exposing (..)
 
 
+type Team
+    = Team
+
+
 type UserData
     = UserData

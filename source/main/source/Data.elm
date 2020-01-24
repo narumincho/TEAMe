@@ -4,18 +4,22 @@ module Data exposing
     , Manager
     , NoRoleUser
     , Player
+    , TeamData
+    , TeamId
     , UserData(..)
     , UserId
     , accessTokenFromString
     , accessTokenToString
     , fileHashFromGraphQLScalaValue
     , fileHashToUrlAsString
+    , getAllTeam
     , getUserData
     , timePosixFromGraphQLScalaValue
     , urlAsStringFromGraphQLScalaValue
     )
 
 import Api.Enum.Role
+import Api.Object.Team
 import Api.Object.UserData
 import Api.Query
 import Api.Scalar
@@ -98,9 +102,22 @@ type Player
         }
 
 
+type TeamId
+    = TeamId String
+
+
+type alias TeamData =
+    { id : TeamId
+    , name : String
+    , managerId : UserId
+    , playerIdList : List UserId
+    , createdAt : Time.Posix
+    }
+
+
 getUserData : AccessToken -> Graphql.SelectionSet.SelectionSet UserData Graphql.Operation.RootQuery
 getUserData accessToken =
-    Api.Query.getUserData { accessToken = accessTokenToString accessToken }
+    Api.Query.userPrivate { accessToken = accessTokenToString accessToken }
         (Graphql.SelectionSet.map5
             (\id name imageFileHash createdAt roleMaybe ->
                 case roleMaybe of
@@ -137,4 +154,30 @@ getUserData accessToken =
             Api.Object.UserData.imageFileHash
             Api.Object.UserData.createdAt
             Api.Object.UserData.role
+        )
+
+
+getAllTeam : Graphql.SelectionSet.SelectionSet (List TeamData) Graphql.Operation.RootQuery
+getAllTeam =
+    Api.Query.allTeam
+        (Graphql.SelectionSet.map5
+            (\id name managerId playerIdList createdAt ->
+                { id = TeamId id
+                , name = name
+                , managerId = UserId managerId
+                , playerIdList =
+                    -- TODO playerListがnullableになってしまっている?
+                    playerIdList
+                        |> List.map
+                            (\playerId ->
+                                playerId |> List.map (Maybe.withDefault "???") |> String.join "," |> UserId
+                            )
+                , createdAt = timePosixFromGraphQLScalaValue createdAt
+                }
+            )
+            Api.Object.Team.id
+            Api.Object.Team.name
+            (Api.Object.Team.manager Api.Object.UserData.id)
+            (Api.Object.Team.playerList Api.Object.UserData.id)
+            Api.Object.Team.createdAt
         )

@@ -26,7 +26,7 @@ hello =
     Object.selectionForField "String" "hello" [] Decode.string
 
 
-type alias GetUserDataRequiredArguments =
+type alias UserPrivateRequiredArguments =
     { accessToken : String }
 
 
@@ -35,6 +35,27 @@ type alias GetUserDataRequiredArguments =
   - accessToken - アクセストークン
 
 -}
-getUserData : GetUserDataRequiredArguments -> SelectionSet decodesTo Api.Object.UserData -> SelectionSet decodesTo RootQuery
-getUserData requiredArgs object_ =
-    Object.selectionForCompositeField "getUserData" [ Argument.required "accessToken" requiredArgs.accessToken Encode.string ] object_ identity
+userPrivate : UserPrivateRequiredArguments -> SelectionSet decodesTo Api.Object.UserData -> SelectionSet decodesTo RootQuery
+userPrivate requiredArgs object_ =
+    Object.selectionForCompositeField "userPrivate" [ Argument.required "accessToken" requiredArgs.accessToken Encode.string ] object_ identity
+
+
+type alias UserRequiredArguments =
+    { userId : String }
+
+
+{-| 説明文
+
+  - userId - 取得したいユーザーID
+
+-}
+user : UserRequiredArguments -> SelectionSet decodesTo Api.Object.UserData -> SelectionSet decodesTo RootQuery
+user requiredArgs object_ =
+    Object.selectionForCompositeField "user" [ Argument.required "userId" requiredArgs.userId Encode.string ] object_ identity
+
+
+{-| すべてのチームを取得する
+-}
+allTeam : SelectionSet decodesTo Api.Object.Team -> SelectionSet (List decodesTo) RootQuery
+allTeam object_ =
+    Object.selectionForCompositeField "allTeam" [] object_ (identity >> Decode.list)

@@ -53,3 +53,10 @@ role =
 createdAt : SelectionSet Api.ScalarCodecs.DateTime Api.Object.UserData
 createdAt =
     Object.selectionForField "ScalarCodecs.DateTime" "createdAt" [] (Api.ScalarCodecs.codecs |> Api.Scalar.unwrapCodecs |> .codecDateTime |> .decoder)
+
+
+{-| 所属しているチーム
+-}
+team : SelectionSet decodesTo Api.Object.Team -> SelectionSet decodesTo Api.Object.UserData
+team object_ =
+    Object.selectionForCompositeField "team" [] object_ identity

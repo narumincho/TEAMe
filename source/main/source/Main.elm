@@ -15,6 +15,7 @@ import Page.MyPage
 import Page.Note
 import Page.Team
 import PageLocation
+import Style
 import Url
 
 
@@ -498,7 +499,7 @@ view : Model -> Browser.Document Message
 view (Model record) =
     { title = "TEAMe"
     , body =
-        [ case record.logInState of
+        ([ case record.logInState of
             NoLogIn noLogInRecord ->
                 logInView noLogInRecord.logInViewModel
 
@@ -506,24 +507,19 @@ view (Model record) =
                 Html.Styled.text "ユーザーの情報を取得中…"
 
             NotSelectedRole notSelectedRoleData ->
-                Html.Styled.div
-                    []
-                    [ Html.Styled.text "はじまして、最初に 監督か 選手かを選んでください"
-                    , Html.Styled.button
-                        [ Html.Styled.Events.onClick (SelectRole Api.Enum.Role.Manager)
-                        ]
-                        [ Html.Styled.text "監督" ]
-                    , Html.Styled.button
-                        [ Html.Styled.Events.onClick (SelectRole Api.Enum.Role.Player) ]
-                        [ Html.Styled.text "選手" ]
-                    ]
+                notSelectedRoleDataView notSelectedRoleData
 
             ManagerLogIn managerLogInData ->
                 Html.Styled.text "監督の画面"
 
             PlayerLogIn playerLogInData ->
                 Html.Styled.text "選手の画面"
-        ]
+         ]
+            ++ (record.messageList
+                    |> List.map
+                        (\message -> Html.Styled.div [] [ Html.Styled.text message ])
+               )
+        )
             |> List.map Html.Styled.toUnstyled
     }
 
@@ -601,3 +597,37 @@ lineLogInButton =
                 [ Html.Styled.text "LINEでログイン" ]
             ]
         ]
+
+
+notSelectedRoleDataView : NotSelectedRoleData -> Html.Styled.Html Message
+notSelectedRoleDataView notSelectedRoleData =
+    case notSelectedRoleData of
+        NotSelectedRoleData record ->
+            Html.Styled.div
+                []
+                [ Html.Styled.text "はじまして、最初に 監督か 選手かを選んでください"
+                , Style.normalButton (SelectRole Api.Enum.Role.Manager) "監督"
+                , Style.normalButton (SelectRole Api.Enum.Role.Player) "選手"
+                ]
+
+        NotSelectedRoleDataSelectManager record ->
+            Html.Styled.div
+                []
+                [ Html.Styled.text "監督はます、チームをつくります。チーム名は?" ]
+
+        NotSelectedRoleDataSelectPlayer record ->
+            Html.Styled.div
+                []
+                [ Html.Styled.text "選手は所属するチームを選んでもらいます"
+                , Html.Styled.div
+                    []
+                    [ Html.Styled.text
+                        (case record.teamList of
+                            Just _ ->
+                                "チームを取得した"
+
+                            Nothing ->
+                                "チームを取得中……"
+                        )
+                    ]
+                ]

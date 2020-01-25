@@ -331,7 +331,7 @@ updateWaitUserData message waitUserData =
                     case userData of
                         Data.NoRole noRoleUser ->
                             ( NotSelectedRole
-                                (NotSelectedRoleDataSelectManager
+                                (NotSelectedRoleData
                                     { accessToken = waitUserData.accessToken
                                     , userData = noRoleUser
                                     }
@@ -605,7 +605,12 @@ notSelectedRoleDataView notSelectedRoleData =
         NotSelectedRoleData record ->
             Html.Styled.div
                 []
-                [ Html.Styled.text "はじまして、最初に 監督か 選手かを選んでください"
+                [ Html.Styled.img
+                    [ Html.Styled.Attributes.src
+                        (Data.fileHashToUrlAsString record.userData.imageFileHash)
+                    ]
+                    []
+                , Html.Styled.text ("はじまして、" ++ record.userData.name ++ "さん。監督か 選手かを選んでください")
                 , Style.normalButton (SelectRole Api.Enum.Role.Manager) "監督"
                 , Style.normalButton (SelectRole Api.Enum.Role.Player) "選手"
                 ]

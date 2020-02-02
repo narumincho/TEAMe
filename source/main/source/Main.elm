@@ -11,6 +11,7 @@ import Graphql.SelectionSet
 import Html.Styled
 import Html.Styled.Attributes
 import Html.Styled.Events
+import Json.Encode
 import Page.MyPage
 import Page.Note
 import Page.Team
@@ -135,9 +136,14 @@ type Message
     | ResponseUserData (Result (Graphql.Http.Error Data.UserData) Data.UserData)
     | SelectRole Api.Enum.Role.Role
     | AllTeamResponse (Result (Graphql.Http.Error (List Data.TeamData)) (List Data.TeamData))
+    | LogInSampleUser Data.AccessToken
 
 
-main : Program () Model Message
+type alias Flag =
+    Maybe String
+
+
+main : Program Flag Model Message
 main =
     Browser.application
         { init = init
@@ -149,43 +155,66 @@ main =
         }
 
 
-init : () -> Url.Url -> Browser.Navigation.Key -> ( Model, Cmd Message )
-init () url key =
+init : Flag -> Url.Url -> Browser.Navigation.Key -> ( Model, Cmd Message )
+init accessTokenFromLocalStorage url key =
     let
-        ( accessTokenMaybe, pageLocation ) =
+        ( accessTokenFromUrl, pageLocation ) =
             PageLocation.initFromUrl url
     in
-    ( Model
-        { logInState =
-            case accessTokenMaybe of
-                Just accessToken ->
-                    WaitUser
-                        { accessToken = accessToken
-                        , pageLocation = pageLocation
-                        }
+    (case ( accessTokenFromLocalStorage, accessTokenFromUrl ) of
+        ( _, Just accessToken ) ->
+            waitUserModelAndCommand pageLocation accessToken
+                |> Tuple.mapFirst
+                    (\logInState ->
+                        Model
+                            { logInState = logInState
+                            , navigationKey = key
+                            , messageList = []
+                            }
+                    )
 
-                Nothing ->
+        ( Just accessToken, Nothing ) ->
+            waitUserModelAndCommand pageLocation (Data.accessTokenFromString accessToken)
+                |> Tuple.mapFirst
+                    (\logInState ->
+                        Model
+                            { logInState = logInState
+                            , navigationKey = key
+                            , messageList = []
+                            }
+                    )
+
+        ( Nothing, Nothing ) ->
+            ( Model
+                { logInState =
                     NoLogIn
                         { logInViewModel = DisplayedLogInButton
                         , pageLocation = pageLocation
                         }
-        , navigationKey = key
-        , messageList = []
-        }
-    , Cmd.batch
-        ([ Browser.Navigation.replaceUrl key
-            (PageLocation.toUrlAsString pageLocation)
-         ]
-            ++ (case accessTokenMaybe of
-                    Just accessToken ->
-                        [ Graphql.Http.queryRequest apiUrl (Data.getUserData accessToken)
-                            |> Graphql.Http.send ResponseUserData
-                        ]
+                , navigationKey = key
+                , messageList = []
+                }
+            , Cmd.none
+            )
+    )
+        |> Tuple.mapSecond
+            (\command ->
+                Cmd.batch
+                    [ command
+                    , Browser.Navigation.replaceUrl key
+                        (PageLocation.toUrlAsString pageLocation)
+                    ]
+            )
 
-                    Nothing ->
-                        []
-               )
-        )
+
+waitUserModelAndCommand : PageLocation.PageLocation -> Data.AccessToken -> ( LogInState, Cmd Message )
+waitUserModelAndCommand pageLocation accessToken =
+    ( WaitUser
+        { accessToken = accessToken
+        , pageLocation = pageLocation
+        }
+    , Graphql.Http.queryRequest apiUrl (Data.getUserData accessToken)
+        |> Graphql.Http.send ResponseUserData
     )
 
 
@@ -225,7 +254,7 @@ update message (Model rec) =
                         |> Tuple.mapFirst
                             (\newNoLogInRecord ->
                                 Model
-                                    { rec | logInState = NoLogIn newNoLogInRecord }
+                                    { rec | logInState = newNoLogInRecord }
                             )
 
                 WaitUser waitUserDataRecord ->
@@ -284,18 +313,19 @@ update message (Model rec) =
 updateNoLogIn :
     Message
     -> NoLogInData
-    -> ( NoLogInData, Cmd Message )
+    -> ( LogInState, Cmd Message )
 updateNoLogIn message noLogInRecord =
     case message of
         UrlChange url ->
-            ( { noLogInRecord | pageLocation = PageLocation.fromUrl url }
+            ( NoLogIn { noLogInRecord | pageLocation = PageLocation.fromUrl url }
             , Cmd.none
             )
 
         RequestLineLogInUrl ->
-            ( { noLogInRecord
-                | logInViewModel = WaitLogInUrl
-              }
+            ( NoLogIn
+                { noLogInRecord
+                    | logInViewModel = WaitLogInUrl
+                }
             , Graphql.Http.mutationRequest apiUrl
                 (Api.Mutation.getLineLogInUrl
                     { path = PageLocation.toUrlAsString noLogInRecord.pageLocation }
@@ -307,17 +337,20 @@ updateNoLogIn message noLogInRecord =
         ResponseLineLogInUrl result ->
             case result of
                 Ok url ->
-                    ( noLogInRecord
+                    ( NoLogIn noLogInRecord
                     , Browser.Navigation.load url
                     )
 
                 Err errorMessage ->
-                    ( { noLogInRecord | logInViewModel = ErrorLogIn "エラー" }
+                    ( NoLogIn { noLogInRecord | logInViewModel = ErrorLogIn "エラー" }
                     , Cmd.none
                     )
 
+        LogInSampleUser accessToken ->
+            waitUserModelAndCommand noLogInRecord.pageLocation accessToken
+
         _ ->
-            ( noLogInRecord
+            ( NoLogIn noLogInRecord
             , Cmd.none
             )
 
@@ -538,6 +571,18 @@ logInView model =
                             []
                             [ Html.Styled.text "TEAMeを使うにはログインが必要です" ]
                         , lineLogInButton
+                        , Style.normalButton
+                            (LogInSampleUser (Data.accessTokenFromString "862631c80456b3045b67e3c5031ca1e7f50140c9b26e662c"))
+                            "Aさん でログイン"
+                        , Style.normalButton
+                            (LogInSampleUser (Data.accessTokenFromString "53b657df6b6d178a1c77d964c3c6d91e68c6bce10f38ead0"))
+                            "Bさん でログイン"
+                        , Style.normalButton
+                            (LogInSampleUser (Data.accessTokenFromString "754f8dc48151667dd5cb80ec092aade54fc32deb93ddad70"))
+                            "Cさん でログイン"
+                        , Style.normalButton
+                            (LogInSampleUser (Data.accessTokenFromString "a893a1988368e272453be3640d8b868aa5095ca4f2d7de789"))
+                            "Dさん でログイン"
                         ]
 
                     WaitLogInUrl ->
@@ -611,6 +656,9 @@ notSelectedRoleDataView notSelectedRoleData =
                     ]
                     []
                 , Html.Styled.text ("はじまして、" ++ record.userData.name ++ "さん。監督か 選手かを選んでください")
+                , Html.Styled.div
+                    []
+                    [ Html.Styled.text (Data.accessTokenToString record.accessToken) ]
                 , Style.normalButton (SelectRole Api.Enum.Role.Manager) "監督"
                 , Style.normalButton (SelectRole Api.Enum.Role.Player) "選手"
                 ]
@@ -618,7 +666,13 @@ notSelectedRoleDataView notSelectedRoleData =
         NotSelectedRoleDataSelectManager record ->
             Html.Styled.div
                 []
-                [ Html.Styled.text "監督はます、チームをつくります。チーム名は?" ]
+                [ Html.Styled.text "監督はます、チームをつくります。チーム名は?"
+                , Html.Styled.input
+                    [ Html.Styled.Attributes.type_ "text"
+                    , Html.Styled.Attributes.property "autocomplete" (Json.Encode.string "team-name")
+                    ]
+                    []
+                ]
 
         NotSelectedRoleDataSelectPlayer record ->
             Html.Styled.div

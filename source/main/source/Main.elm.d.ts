@@ -8,7 +8,7 @@ export namespace Elm {
   }
 }
 
-type Flags = {};
+type Flags = string | null;
 
 type Ports = {};
 

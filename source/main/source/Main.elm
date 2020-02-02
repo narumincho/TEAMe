@@ -650,11 +650,9 @@ notSelectedRoleDataView notSelectedRoleData =
         NotSelectedRoleData record ->
             Html.Styled.div
                 []
-                [ Html.Styled.img
-                    [ Html.Styled.Attributes.src
-                        (Data.fileHashToUrlAsString record.userData.imageFileHash)
-                    ]
-                    []
+                [ Style.userImage
+                    record.userData.name
+                    record.userData.imageFileHash
                 , Html.Styled.text ("はじまして、" ++ record.userData.name ++ "さん。監督か 選手かを選んでください")
                 , Html.Styled.div
                     []

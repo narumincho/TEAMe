@@ -3,6 +3,10 @@
     "public": "distribution",
     "rewrites": [
       {
+        "source": "/file/**",
+        "function": "file"
+      },
+      {
         "source": "**",
         "function": "indexHtml"
       }

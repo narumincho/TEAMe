@@ -52,7 +52,7 @@ import Url
 
 apiUrl : String
 apiUrl =
-    Data.releaseOrigin ++ "/api"
+    Data.cloudFunctionsOrigin ++ "/api"
 
 
 type Model

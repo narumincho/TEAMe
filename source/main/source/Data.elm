@@ -14,7 +14,7 @@ module Data exposing
     , fileHashToUrlAsString
     , getAllTeam
     , getUserData
-    , releaseOrigin
+    , cloudFunctionsOrigin
     , timePosixFromGraphQLScalaValue
     , urlAsStringFromGraphQLScalaValue
     )
@@ -37,9 +37,9 @@ type FileHash
     = FileHash String
 
 
-releaseOrigin : String
-releaseOrigin =
-    "https://teame-c1a32.web.app"
+cloudFunctionsOrigin : String
+cloudFunctionsOrigin =
+    "https://us-central1-teame-c1a32.cloudfunctions.net"
 
 
 accessTokenFromString : String -> AccessToken
@@ -54,7 +54,7 @@ accessTokenToString (AccessToken string) =
 
 fileHashToUrlAsString : FileHash -> String
 fileHashToUrlAsString (FileHash path) =
-    releaseOrigin ++ "/file/" ++ path
+    cloudFunctionsOrigin ++ "/file/" ++ path
 
 
 timePosixFromGraphQLScalaValue : Api.Scalar.DateTime -> Time.Posix

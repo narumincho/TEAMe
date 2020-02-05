@@ -11,7 +11,6 @@ import Graphql.SelectionSet
 import Html.Styled
 import Html.Styled.Attributes
 import Html.Styled.Events
-import Json.Encode
 import Page.MyPage
 import Page.Note
 import Page.Team

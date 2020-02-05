@@ -7,6 +7,10 @@
         "function": "file"
       },
       {
+        "source": "/api/**",
+        "function": "api"
+      },
+      {
         "source": "**",
         "function": "indexHtml"
       }

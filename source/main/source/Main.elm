@@ -52,7 +52,7 @@ import Url
 
 apiUrl : String
 apiUrl =
-    "https://us-central1-teame-c1a32.cloudfunctions.net/api"
+    Data.releaseOrigin ++ "/api"
 
 
 type Model

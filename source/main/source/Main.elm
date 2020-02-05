@@ -92,6 +92,7 @@ type NotSelectedRoleData
         { accessToken : Data.AccessToken
         , userData : Data.NoRoleUser
         , teamName : String
+        , creating : Bool
         }
     | NotSelectedRoleDataSelectPlayer
         { accessToken : Data.AccessToken
@@ -138,6 +139,7 @@ type Message
     | SelectRole Api.Enum.Role.Role
     | InputTeamName String
     | CreateTeam
+    | CreateTeamResponse (Result (Graphql.Http.Error Data.UserData) Data.UserData)
     | AllTeamResponse (Result (Graphql.Http.Error (List Data.TeamData)) (List Data.TeamData))
     | LogInSampleUser Data.AccessToken
 
@@ -216,7 +218,7 @@ waitUserModelAndCommand pageLocation accessToken =
         { accessToken = accessToken
         , pageLocation = pageLocation
         }
-    , Graphql.Http.queryRequest apiUrl (Data.getUserData accessToken)
+    , Graphql.Http.queryRequest apiUrl (Data.getUserPrivateData accessToken)
         |> Graphql.Http.send ResponseUserData
     )
 
@@ -422,6 +424,7 @@ updateNoSelectedRole message notSelectedRoleData =
                             { accessToken = record.accessToken
                             , userData = record.userData
                             , teamName = ""
+                            , creating = False
                             }
                         )
                     , []
@@ -462,14 +465,45 @@ updateNoSelectedRole message notSelectedRoleData =
             )
 
         ( CreateTeam, NotSelectedRoleDataSelectManager record ) ->
-            ( NotSelectedRole (NotSelectedRoleDataSelectManager record)
+            ( NotSelectedRole (NotSelectedRoleDataSelectManager { record | creating = True })
             , []
             , if Data.validateTeamName record.teamName then
-                Cmd.none
+                Graphql.Http.mutationRequest apiUrl (Data.createTeamAndSetManagerRole record.accessToken record.teamName)
+                    |> Graphql.Http.send CreateTeamResponse
 
               else
                 Cmd.none
             )
+
+        ( CreateTeamResponse result, NotSelectedRoleDataSelectManager record ) ->
+            case result of
+                Ok newUserData ->
+                    case newUserData of
+                        Data.RoleManager managerUser ->
+                            let
+                                ( pageModel, command ) =
+                                    pageLocationToInitPageModel PageLocation.MyPage
+                            in
+                            ( ManagerLogIn
+                                { accessToken = record.accessToken
+                                , userData = managerUser
+                                , pageModel = pageModel
+                                }
+                            , []
+                            , command
+                            )
+
+                        _ ->
+                            ( NotSelectedRole (NotSelectedRoleDataSelectManager { record | creating = False })
+                            , [ "チーム作成時にユーザ情報の変更に失敗しました" ]
+                            , Cmd.none
+                            )
+
+                Err _ ->
+                    ( NotSelectedRole (NotSelectedRoleDataSelectManager { record | creating = False })
+                    , [ "チームの作成に失敗しました" ]
+                    , Cmd.none
+                    )
 
         ( _, _ ) ->
             ( NotSelectedRole notSelectedRoleData
@@ -687,7 +721,7 @@ notSelectedRoleDataView notSelectedRoleData =
                 ]
 
         NotSelectedRoleDataSelectManager record ->
-            createTeamView record.teamName
+            createTeamView record.creating record.teamName
 
         NotSelectedRoleDataSelectPlayer record ->
             Html.Styled.div
@@ -707,8 +741,8 @@ notSelectedRoleDataView notSelectedRoleData =
                 ]
 
 
-createTeamView : String -> Html.Styled.Html Message
-createTeamView teamName =
+createTeamView : Bool -> String -> Html.Styled.Html Message
+createTeamView creating teamName =
     Html.Styled.div
         [ Html.Styled.Attributes.css
             [ Css.property "display" "grid"
@@ -718,14 +752,19 @@ createTeamView teamName =
             , Css.height (Css.pct 100)
             ]
         ]
-        [ Html.Styled.div [] [ Html.Styled.text "監督はまず、チームをつくります。チーム名は?" ]
-        , Style.inputText "team-name" InputTeamName
-        , Style.conditionButton
-            (if Data.validateTeamName teamName then
-                Just CreateTeam
+        (if creating then
+            [ Html.Styled.div [] [ Html.Styled.text "チームを作成中……" ] ]
 
-             else
-                Nothing
-            )
-            "作成"
-        ]
+         else
+            [ Html.Styled.div [] [ Html.Styled.text "監督はまず、チームをつくります。チーム名は?" ]
+            , Style.inputText "team-name" InputTeamName
+            , Style.conditionButton
+                (if Data.validateTeamName teamName then
+                    Just CreateTeam
+
+                 else
+                    Nothing
+                )
+                "作成"
+            ]
+        )

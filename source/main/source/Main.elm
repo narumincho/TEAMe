@@ -91,6 +91,7 @@ type NotSelectedRoleData
     | NotSelectedRoleDataSelectManager
         { accessToken : Data.AccessToken
         , userData : Data.NoRoleUser
+        , teamName : String
         }
     | NotSelectedRoleDataSelectPlayer
         { accessToken : Data.AccessToken
@@ -135,6 +136,8 @@ type Message
     | ResponseLineLogInUrl (Result (Graphql.Http.Error String) String)
     | ResponseUserData (Result (Graphql.Http.Error Data.UserData) Data.UserData)
     | SelectRole Api.Enum.Role.Role
+    | InputTeamName String
+    | CreateTeam
     | AllTeamResponse (Result (Graphql.Http.Error (List Data.TeamData)) (List Data.TeamData))
     | LogInSampleUser Data.AccessToken
 
@@ -414,7 +417,13 @@ updateNoSelectedRole message notSelectedRoleData =
         ( SelectRole role, NotSelectedRoleData record ) ->
             case role of
                 Api.Enum.Role.Manager ->
-                    ( NotSelectedRole (NotSelectedRoleDataSelectManager record)
+                    ( NotSelectedRole
+                        (NotSelectedRoleDataSelectManager
+                            { accessToken = record.accessToken
+                            , userData = record.userData
+                            , teamName = ""
+                            }
+                        )
                     , []
                     , Cmd.none
                     )
@@ -446,9 +455,25 @@ updateNoSelectedRole message notSelectedRoleData =
                     , Cmd.none
                     )
 
+        ( InputTeamName teamName, NotSelectedRoleDataSelectManager record ) ->
+            ( NotSelectedRole (NotSelectedRoleDataSelectManager { record | teamName = teamName })
+            , []
+            , Cmd.none
+            )
+
+        ( CreateTeam, NotSelectedRoleDataSelectManager record ) ->
+            ( NotSelectedRole (NotSelectedRoleDataSelectManager record)
+            , []
+            , if Data.validateTeamName record.teamName then
+                Cmd.none
+
+              else
+                Cmd.none
+            )
+
         ( _, _ ) ->
             ( NotSelectedRole notSelectedRoleData
-            , [ "チームの一覧取得に失敗" ]
+            , []
             , Cmd.none
             )
 
@@ -662,15 +687,7 @@ notSelectedRoleDataView notSelectedRoleData =
                 ]
 
         NotSelectedRoleDataSelectManager record ->
-            Html.Styled.div
-                []
-                [ Html.Styled.text "監督はます、チームをつくります。チーム名は?"
-                , Html.Styled.input
-                    [ Html.Styled.Attributes.type_ "text"
-                    , Html.Styled.Attributes.property "autocomplete" (Json.Encode.string "team-name")
-                    ]
-                    []
-                ]
+            createTeamView record.teamName
 
         NotSelectedRoleDataSelectPlayer record ->
             Html.Styled.div
@@ -688,3 +705,27 @@ notSelectedRoleDataView notSelectedRoleData =
                         )
                     ]
                 ]
+
+
+createTeamView : String -> Html.Styled.Html Message
+createTeamView teamName =
+    Html.Styled.div
+        [ Html.Styled.Attributes.css
+            [ Css.property "display" "grid"
+            , Css.width (Css.pct 100)
+            , Css.property "gap" "1rem"
+            , Css.property "align-content" "center"
+            , Css.height (Css.pct 100)
+            ]
+        ]
+        [ Html.Styled.div [] [ Html.Styled.text "監督はまず、チームをつくります。チーム名は?" ]
+        , Style.inputText "team-name" InputTeamName
+        , Style.conditionButton
+            (if Data.validateTeamName teamName then
+                Just CreateTeam
+
+             else
+                Nothing
+            )
+            "作成"
+        ]

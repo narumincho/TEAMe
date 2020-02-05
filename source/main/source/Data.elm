@@ -10,13 +10,14 @@ module Data exposing
     , UserId
     , accessTokenFromString
     , accessTokenToString
+    , cloudFunctionsOrigin
     , fileHashFromGraphQLScalaValue
     , fileHashToUrlAsString
     , getAllTeam
     , getUserData
-    , cloudFunctionsOrigin
     , timePosixFromGraphQLScalaValue
     , urlAsStringFromGraphQLScalaValue
+    , validateTeamName
     )
 
 import Api.Enum.Role
@@ -119,6 +120,15 @@ type alias TeamData =
     , playerIdList : List UserId
     , createdAt : Time.Posix
     }
+
+
+validateTeamName : String -> Bool
+validateTeamName teamName =
+    let
+        timedTeamName =
+            String.trim teamName
+    in
+    0 < String.length timedTeamName && String.length timedTeamName < 60
 
 
 getUserData : AccessToken -> Graphql.SelectionSet.SelectionSet UserData Graphql.Operation.RootQuery

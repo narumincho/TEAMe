@@ -13,9 +13,11 @@ import Url.Builder
 
 
 type PageLocation
-    = MyPage
-    | Note
+    = Top
+    | PlayerNote
+    | PlayerPdcaForm
     | Team
+    | ManagerPdcaEditor
 
 
 initFromUrl : Url.Url -> ( Maybe Data.AccessToken, PageLocation )
@@ -33,13 +35,7 @@ initFromUrl url =
     ( fragmentDict
         |> Dict.get "accessToken"
         |> Maybe.map Data.accessTokenFromString
-    , [ myPageParser |> parserMap (always MyPage)
-      , noteParser |> parserMap (always Note)
-      , teamParser |> parserMap (always Team)
-      ]
-        |> List.map (\f -> f path)
-        |> oneOf
-        |> Maybe.withDefault MyPage
+    , fromUrl url
     )
 
 
@@ -51,13 +47,15 @@ fromUrl url =
                 |> Url.toString
                 |> Erl.parse
     in
-    [ myPageParser |> parserMap (always MyPage)
-    , noteParser |> parserMap (always Note)
-    , teamParser |> parserMap (always Team)
+    [ topParser |> parserMap (always Top)
+    , playerNoteParser |> parserMap (always PlayerNote)
+    , playerPdcaFormParser |> parserMap (always PlayerPdcaForm)
+    , playerTeamParser |> parserMap (always Team)
+    , managerPdcaEditorParser |> parserMap (always ManagerPdcaEditor)
     ]
         |> List.map (\f -> f path)
         |> oneOf
-        |> Maybe.withDefault MyPage
+        |> Maybe.withDefault Top
 
 
 parserMap : (a -> b) -> (List String -> Maybe a) -> (List String -> Maybe b)
@@ -82,54 +80,90 @@ oneOf list =
 -}
 toUrlAsString : PageLocation -> String
 toUrlAsString location =
-    case location of
-        MyPage ->
-            Url.Builder.absolute myPagePath []
+    (case location of
+        Top ->
+            ( topPath, [] )
 
-        Note ->
-            Url.Builder.absolute notePath []
+        PlayerNote ->
+            ( playerNotePath, [] )
+
+        PlayerPdcaForm ->
+            ( playerPdcaFormPath, [] )
 
         Team ->
-            Url.Builder.absolute teamPath []
+            ( playerTeamPath, [] )
+
+        ManagerPdcaEditor ->
+            ( managerPdcaEditorPath, [] )
+    )
+        |> (\( path, query ) -> Url.Builder.absolute path query)
 
 
-myPageParser : List String -> Maybe ()
-myPageParser path =
-    if path == myPagePath then
+topParser : List String -> Maybe ()
+topParser path =
+    if path == topPath then
         Just ()
 
     else
         Nothing
 
 
-myPagePath : List String
-myPagePath =
+topPath : List String
+topPath =
     []
 
 
-noteParser : List String -> Maybe ()
-noteParser path =
-    if path == notePath then
+playerNoteParser : List String -> Maybe ()
+playerNoteParser path =
+    if path == playerNotePath then
         Just ()
 
     else
         Nothing
 
 
-notePath : List String
-notePath =
+playerNotePath : List String
+playerNotePath =
     [ "note" ]
 
 
-teamParser : List String -> Maybe ()
-teamParser path =
-    if path == teamPath then
+playerPdcaFormParser : List String -> Maybe ()
+playerPdcaFormParser path =
+    if path == playerPdcaFormPath then
         Just ()
 
     else
         Nothing
 
 
-teamPath : List String
-teamPath =
+playerPdcaFormPath : List String
+playerPdcaFormPath =
+    [ "pdca-form" ]
+
+
+playerTeamParser : List String -> Maybe ()
+playerTeamParser path =
+    if path == playerTeamPath then
+        Just ()
+
+    else
+        Nothing
+
+
+playerTeamPath : List String
+playerTeamPath =
     [ "team" ]
+
+
+managerPdcaEditorParser : List String -> Maybe ()
+managerPdcaEditorParser path =
+    if path == managerPdcaEditorPath then
+        Just ()
+
+    else
+        Nothing
+
+
+managerPdcaEditorPath : List String
+managerPdcaEditorPath =
+    [ "pdca-editor" ]

@@ -1,12 +1,46 @@
-module Style exposing (conditionButton, inputText, normalButton, userImage)
+module Style exposing (conditionButton, inputText, managerBottomNavigation, normalButton, playerBottomNavigation, header, userImage)
 
 import Css
-import Css.Animations
 import Css.Transitions
 import Data
 import Html.Styled as S
 import Html.Styled.Attributes as A
 import Html.Styled.Events as E
+
+
+header : Maybe Data.UserData -> S.Html message
+header userMaybe =
+    S.div
+        []
+        ([ S.div [] [ S.text "TEAMe" ]
+         ]
+            ++ (case userMaybe of
+                    Just user ->
+                        [ Data.getUserNameAndImageFileHash user |> userImage ]
+
+                    Nothing ->
+                        []
+               )
+        )
+
+
+playerBottomNavigation : S.Html message
+playerBottomNavigation =
+    S.div
+        []
+        [ S.div [] [ S.text "マイページ" ]
+        , S.div [] [ S.text "ノート" ]
+        , S.div [] [ S.text "チーム" ]
+        ]
+
+
+managerBottomNavigation : S.Html message
+managerBottomNavigation =
+    S.div
+        []
+        [ S.div [] [ S.text "マイページ" ]
+        , S.div [] [ S.text "チーム" ]
+        ]
 
 
 normalButton : message -> String -> S.Html message
@@ -45,8 +79,8 @@ conditionButton messageMaybe text =
                 [ S.text text ]
 
 
-userImage : String -> Data.FileHash -> S.Html message
-userImage userName imageFileHash =
+userImage : { name : String, imageFileHash : Data.FileHash } -> S.Html message
+userImage { name, imageFileHash } =
     S.img
         [ A.css
             [ Css.width (Css.rem 2)
@@ -54,7 +88,7 @@ userImage userName imageFileHash =
             , Css.property "object-fit" "cover"
             , Css.borderRadius (Css.pct 50)
             ]
-        , A.alt (userName ++ "のプロフィール画像")
+        , A.alt (name ++ "のプロフィール画像")
         , A.src (Data.fileHashToUrlAsString imageFileHash)
         ]
         []

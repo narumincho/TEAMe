@@ -11,14 +11,16 @@ module Data exposing
     , accessTokenFromString
     , accessTokenToString
     , cloudFunctionsOrigin
+    , createTeamAndSetManagerRole
     , fileHashFromGraphQLScalaValue
     , fileHashToUrlAsString
     , getAllTeam
+    , getUserNameAndImageFileHash
     , getUserPrivateData
     , timePosixFromGraphQLScalaValue
     , urlAsStringFromGraphQLScalaValue
     , validateTeamName
-    , createTeamAndSetManagerRole)
+    )
 
 import Api.Enum.Role
 import Api.Mutation
@@ -124,13 +126,32 @@ type alias TeamData =
     }
 
 
+getUserNameAndImageFileHash : UserData -> { name : String, imageFileHash : FileHash }
+getUserNameAndImageFileHash userData =
+    case userData of
+        NoRole record ->
+            { name = record.name
+            , imageFileHash = record.imageFileHash
+            }
+
+        RolePlayer (Player record) ->
+            { name = record.name
+            , imageFileHash = record.imageFileHash
+            }
+
+        RoleManager (Manager record) ->
+            { name = record.name
+            , imageFileHash = record.imageFileHash
+            }
+
+
 validateTeamName : String -> Bool
 validateTeamName teamName =
     let
         timedTeamName =
             String.trim teamName
     in
-    0 < String.length timedTeamName && String.length timedTeamName < 60
+    0 < String.length timedTeamName
 
 
 getUserPrivateData : AccessToken -> Graphql.SelectionSet.SelectionSet UserData Graphql.Operation.RootQuery

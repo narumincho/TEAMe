@@ -48,6 +48,13 @@ role =
     Object.selectionForField "(Maybe Enum.Role.Role)" "role" [] (Api.Enum.Role.decoder |> Decode.nullable)
 
 
+{-| 個人目標/指導目標
+-}
+goal : SelectionSet String Api.Object.UserData
+goal =
+    Object.selectionForField "String" "goal" [] Decode.string
+
+
 {-| ユーザーが作られた日時
 -}
 createdAt : SelectionSet Api.ScalarCodecs.DateTime Api.Object.UserData

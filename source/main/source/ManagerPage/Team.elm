@@ -3,6 +3,7 @@ module ManagerPage.Team exposing (Message(..), Model, init, update, view)
 import Data
 import Html.Styled as S
 import Style
+import SubCommand
 
 
 type Model
@@ -13,14 +14,14 @@ type Message
     = Message
 
 
-init : Data.Manager -> ( Model, Cmd Message )
+init : Data.Manager -> ( Model, SubCommand.SubCommand Message )
 init manager =
-    ( Model { manager = manager }, Cmd.none )
+    ( Model { manager = manager }, SubCommand.None )
 
 
-update : Message -> Model -> ( Model, Cmd Message )
+update : Message -> Model -> ( Model, SubCommand.SubCommand Message )
 update message model =
-    ( model, Cmd.none )
+    ( model, SubCommand.None )
 
 
 view : Model -> S.Html Message

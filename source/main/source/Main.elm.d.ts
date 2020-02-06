@@ -10,7 +10,9 @@ export namespace Elm {
 
 type Flags = string | null;
 
-type Ports = {};
+type Ports = {
+  setText: SubForElmCmd<{ id: string; text: string }>;
+};
 
 type SubForElmCmd<T> = {
   subscribe: (arg: (value: T) => void) => void;

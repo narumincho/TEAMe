@@ -10,6 +10,7 @@ module Data exposing
     , UserId
     , accessTokenFromString
     , accessTokenToString
+    , apiUrl
     , cloudFunctionsOrigin
     , createTeamAndSetManagerRole
     , fileHashFromGraphQLScalaValue
@@ -17,10 +18,19 @@ module Data exposing
     , getAllTeam
     , getUserNameAndImageFileHash
     , getUserPrivateData
+    , joinTeamAndSetPlayerRole
+    , managerGetGoal
+    , managerGetImageFileHash
+    , managerGetName
+    , playerGetGoal
+    , playerGetImageFileHash
+    , playerGetName
     , timePosixFromGraphQLScalaValue
     , urlAsStringFromGraphQLScalaValue
+    , userGetManager
+    , userGetPlayer
     , validateTeamName
-    , joinTeamAndSetPlayerRole)
+    )
 
 import Api.Enum.Role
 import Api.Mutation
@@ -45,6 +55,11 @@ type FileHash
 cloudFunctionsOrigin : String
 cloudFunctionsOrigin =
     "https://us-central1-teame-c1a32.cloudfunctions.net"
+
+
+apiUrl : String
+apiUrl =
+    cloudFunctionsOrigin ++ "/api"
 
 
 accessTokenFromString : String -> AccessToken
@@ -95,13 +110,49 @@ type alias NoRoleUser =
     }
 
 
+userGetManager : UserData -> Maybe Manager
+userGetManager userData =
+    case userData of
+        RoleManager manager ->
+            Just manager
+
+        _ ->
+            Nothing
+
+
+userGetPlayer : UserData -> Maybe Player
+userGetPlayer user =
+    case user of
+        RolePlayer player ->
+            Just player
+
+        _ ->
+            Nothing
+
+
 type Manager
     = Manager
         { id : UserId
         , name : String
         , imageFileHash : FileHash
+        , goal : String
         , createdAt : Time.Posix
         }
+
+
+managerGetName : Manager -> String
+managerGetName (Manager { name }) =
+    name
+
+
+managerGetImageFileHash : Manager -> FileHash
+managerGetImageFileHash (Manager { imageFileHash }) =
+    imageFileHash
+
+
+managerGetGoal : Manager -> String
+managerGetGoal (Manager { goal }) =
+    goal
 
 
 type Player
@@ -109,8 +160,24 @@ type Player
         { id : UserId
         , name : String
         , imageFileHash : FileHash
+        , goal : String
         , createdAt : Time.Posix
         }
+
+
+playerGetName : Player -> String
+playerGetName (Player { name }) =
+    name
+
+
+playerGetImageFileHash : Player -> FileHash
+playerGetImageFileHash (Player { imageFileHash }) =
+    imageFileHash
+
+
+playerGetGoal : Player -> String
+playerGetGoal (Player { goal }) =
+    goal
 
 
 type TeamId
@@ -209,8 +276,8 @@ teamDataQuery =
 
 userDataQuery : Graphql.SelectionSet.SelectionSet UserData Api.Object.UserData
 userDataQuery =
-    Graphql.SelectionSet.map5
-        (\id name imageFileHash createdAt roleMaybe ->
+    Graphql.SelectionSet.map6
+        (\id name imageFileHash goal createdAt roleMaybe ->
             case roleMaybe of
                 Just Api.Enum.Role.Manager ->
                     RoleManager
@@ -218,6 +285,7 @@ userDataQuery =
                             { id = UserId id
                             , name = name
                             , imageFileHash = fileHashFromGraphQLScalaValue imageFileHash
+                            , goal = goal
                             , createdAt = timePosixFromGraphQLScalaValue createdAt
                             }
                         )
@@ -228,6 +296,7 @@ userDataQuery =
                             { id = UserId id
                             , name = name
                             , imageFileHash = fileHashFromGraphQLScalaValue imageFileHash
+                            , goal = goal
                             , createdAt = timePosixFromGraphQLScalaValue createdAt
                             }
                         )
@@ -243,5 +312,6 @@ userDataQuery =
         Api.Object.UserData.id
         Api.Object.UserData.name
         Api.Object.UserData.imageFileHash
+        Api.Object.UserData.goal
         Api.Object.UserData.createdAt
         Api.Object.UserData.role

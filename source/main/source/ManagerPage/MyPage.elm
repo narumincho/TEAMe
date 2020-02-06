@@ -3,31 +3,78 @@ module ManagerPage.MyPage exposing (Message(..), Model, init, update, view)
 import Data
 import Html.Styled as S
 import Style
+import SubCommand
 
 
 type Model
-    = Model { manager : Data.Manager }
+    = Model { updatingGoal : Bool, nextGoal : String }
 
 
 type Message
-    = Message
+    = InputGoal String
+    | CancelUpdateGoal
+    | UpdateGoal
+    | UpdateGoalResponse
 
 
-init : Data.Manager -> ( Model, Cmd Message )
+init : Data.Manager -> ( Model, SubCommand.SubCommand Message )
 init manager =
-    ( Model { manager = manager }, Cmd.none )
+    ( Model { updatingGoal = False, nextGoal = Data.managerGetGoal manager }
+    , SubCommand.ChangeInputText { id = goalInputDomId, text = Data.managerGetGoal manager }
+    )
 
 
-update : Message -> Model -> ( Model, Cmd Message )
-update message model =
-    ( model, Cmd.none )
+update : Data.Manager -> Message -> Model -> ( Model, SubCommand.SubCommand Message )
+update manager message (Model record) =
+    case message of
+        InputGoal goal ->
+            ( Model { record | nextGoal = goal }
+            , SubCommand.None
+            )
+
+        CancelUpdateGoal ->
+            ( Model { record | nextGoal = Data.managerGetGoal manager }
+            , SubCommand.None
+            )
+
+        UpdateGoal ->
+            ( Model record
+            , SubCommand.None
+            )
+
+        UpdateGoalResponse ->
+            ( Model record
+            , SubCommand.None
+            )
 
 
-view : Model -> S.Html Message
-view (Model record) =
-    S.div
-        []
-        [ Style.header (Just (Data.RoleManager record.manager))
-        , S.text "指導者のマイページ"
+view : Data.Manager -> Model -> S.Html Message
+view manager model =
+    Style.pageContainer
+        [ Style.header (Just (Data.RoleManager manager))
+        , mainView manager model
         , Style.managerBottomNavigation
         ]
+
+
+mainView : Data.Manager -> Model -> S.Html Message
+mainView manager (Model record) =
+    S.div
+        []
+        ([ S.div [] [ S.text "指導目標" ]
+         , Style.inputText goalInputDomId "goal" InputGoal
+         ]
+            ++ (if record.nextGoal /= Data.managerGetGoal manager then
+                    [ Style.normalButton CancelUpdateGoal "キャンセル"
+                    , Style.normalButton UpdateGoal "変更"
+                    ]
+
+                else
+                    []
+               )
+        )
+
+
+goalInputDomId : String
+goalInputDomId =
+    "goal"

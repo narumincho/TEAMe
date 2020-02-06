@@ -1,4 +1,4 @@
-module Main exposing (main)
+port module Main exposing (main)
 
 import Api.Enum.Role
 import Api.Mutation
@@ -18,6 +18,7 @@ import PlayerPage.MyPage
 import PlayerPage.Note
 import PlayerPage.Team
 import Style
+import SubCommand
 import Url
 
 
@@ -51,16 +52,14 @@ import Url
 -}
 
 
-apiUrl : String
-apiUrl =
-    Data.cloudFunctionsOrigin ++ "/api"
+port setText : { id : String, text : String } -> Cmd msg
 
 
 type Model
     = Model
         { mainModel : MainModel
         , navigationKey : Browser.Navigation.Key
-        , messageList : List String
+        , notificationList : List String
         }
 
 
@@ -185,7 +184,7 @@ init accessTokenFromLocalStorage url key =
                         Model
                             { mainModel = logInState
                             , navigationKey = key
-                            , messageList = []
+                            , notificationList = []
                             }
                     )
 
@@ -196,7 +195,7 @@ init accessTokenFromLocalStorage url key =
                         Model
                             { mainModel = logInState
                             , navigationKey = key
-                            , messageList = []
+                            , notificationList = []
                             }
                     )
 
@@ -208,7 +207,7 @@ init accessTokenFromLocalStorage url key =
                         , pageLocation = pageLocation
                         }
                 , navigationKey = key
-                , messageList = []
+                , notificationList = []
                 }
             , Cmd.none
             )
@@ -229,7 +228,7 @@ waitUserModelAndCommand pageLocation accessToken =
         { accessToken = accessToken
         , pageLocation = pageLocation
         }
-    , Graphql.Http.queryRequest apiUrl (Data.getUserPrivateData accessToken)
+    , Graphql.Http.queryRequest Data.apiUrl (Data.getUserPrivateData accessToken)
         |> Graphql.Http.send ResponseUserData
     )
 
@@ -254,20 +253,23 @@ pageLocationToInitPlayerPageModel player pageLocation =
                 |> Tuple.mapBoth PagePlayerMyPage (Cmd.map MessagePlayerMyPage)
 
 
-pageLocationToInitManagerPageModel : Data.Manager -> PageLocation.PageLocation -> ( ManagerPageModel, Cmd Message )
+pageLocationToInitManagerPageModel :
+    Data.Manager
+    -> PageLocation.PageLocation
+    -> ( ManagerPageModel, SubCommand.SubCommand Message )
 pageLocationToInitManagerPageModel manager pageLocation =
     case pageLocation of
         PageLocation.Top ->
             ManagerPage.MyPage.init manager
-                |> Tuple.mapBoth PageManagerMyPage (Cmd.map MessageManagerMyPage)
+                |> Tuple.mapBoth PageManagerMyPage (SubCommand.map MessageManagerMyPage)
 
         PageLocation.Team ->
             ManagerPage.Team.init manager
-                |> Tuple.mapBoth PageManagerTeam (Cmd.map MessageManagerTeam)
+                |> Tuple.mapBoth PageManagerTeam (SubCommand.map MessageManagerTeam)
 
         _ ->
             ManagerPage.MyPage.init manager
-                |> Tuple.mapBoth PageManagerMyPage (Cmd.map MessageManagerMyPage)
+                |> Tuple.mapBoth PageManagerMyPage (SubCommand.map MessageManagerMyPage)
 
 
 update : Message -> Model -> ( Model, Cmd Message )
@@ -301,7 +303,7 @@ update message (Model rec) =
                     ( Model
                         { rec
                             | mainModel = newLogInState
-                            , messageList = rec.messageList ++ newMessageList
+                            , notificationList = rec.notificationList ++ newMessageList
                         }
                     , cmd
                     )
@@ -314,7 +316,7 @@ update message (Model rec) =
                     ( Model
                         { rec
                             | mainModel = newLogInState
-                            , messageList = rec.messageList ++ newMessageList
+                            , notificationList = rec.notificationList ++ newMessageList
                         }
                     , cmd
                     )
@@ -327,7 +329,7 @@ update message (Model rec) =
                     ( Model
                         { rec
                             | mainModel = ManagerLogIn newManagerLogInData
-                            , messageList = rec.messageList ++ newMessageList
+                            , notificationList = rec.notificationList ++ newMessageList
                         }
                     , cmd
                     )
@@ -340,7 +342,7 @@ update message (Model rec) =
                     ( Model
                         { rec
                             | mainModel = PlayerLogIn newPlayerData
-                            , messageList = rec.messageList ++ newMessageList
+                            , notificationList = rec.notificationList ++ newMessageList
                         }
                     , cmd
                     )
@@ -362,7 +364,7 @@ updateNoLogIn message noLogInRecord =
                 { noLogInRecord
                     | logInViewModel = WaitLogInUrl
                 }
-            , Graphql.Http.mutationRequest apiUrl
+            , Graphql.Http.mutationRequest Data.apiUrl
                 (Api.Mutation.getLineLogInUrl
                     { path = PageLocation.toUrlAsString noLogInRecord.pageLocation }
                     |> Graphql.SelectionSet.map Data.urlAsStringFromGraphQLScalaValue
@@ -424,14 +426,25 @@ responseUserData waitUserData userData =
             let
                 ( pageModel, command ) =
                     pageLocationToInitManagerPageModel manager waitUserData.pageLocation
+                        |> Tuple.mapSecond subCommandToNewDataAndCommand
             in
             ( ManagerLogIn
                 { accessToken = waitUserData.accessToken
-                , manager = manager
+                , manager =
+                    command.newUser
+                        |> Maybe.andThen Data.userGetManager
+                        |> Maybe.withDefault manager
                 , pageModel = pageModel
                 }
             , [ "監督としてログイン成功!" ]
-            , command
+                ++ (case command.newNotification of
+                        Just notification ->
+                            [ notification ]
+
+                        Nothing ->
+                            []
+                   )
+            , command.command
             )
 
         Data.RolePlayer player ->
@@ -477,7 +490,7 @@ updateNoSelectedRole message notSelectedRoleData =
                             }
                         )
                     , []
-                    , Graphql.Http.queryRequest apiUrl Data.getAllTeam
+                    , Graphql.Http.queryRequest Data.apiUrl Data.getAllTeam
                         |> Graphql.Http.send AllTeamResponse
                     )
 
@@ -491,7 +504,9 @@ updateNoSelectedRole message notSelectedRoleData =
             ( NotSelectedRole (NotSelectedRoleManager { record | creating = True })
             , [ record.teamName ++ "を作成中……" ]
             , if Data.validateTeamName record.teamName then
-                Graphql.Http.mutationRequest apiUrl (Data.createTeamAndSetManagerRole record.accessToken record.teamName)
+                Graphql.Http.mutationRequest
+                    Data.apiUrl
+                    (Data.createTeamAndSetManagerRole record.accessToken record.teamName)
                     |> Graphql.Http.send CreateTeamResponse
 
               else
@@ -504,16 +519,25 @@ updateNoSelectedRole message notSelectedRoleData =
                     case newUserData of
                         Data.RoleManager managerUser ->
                             let
-                                ( pageModel, command ) =
+                                ( pageModel, newDataAndCommand ) =
                                     pageLocationToInitManagerPageModel managerUser PageLocation.Top
+                                        |> Tuple.mapSecond subCommandToNewDataAndCommand
                             in
                             ( ManagerLogIn
                                 { accessToken = record.accessToken
-                                , manager = managerUser
+                                , manager =
+                                    newDataAndCommand.newUser
+                                        |> Maybe.andThen Data.userGetManager
+                                        |> Maybe.withDefault managerUser
                                 , pageModel = pageModel
                                 }
-                            , []
-                            , command
+                            , case newDataAndCommand.newNotification of
+                                Just notification ->
+                                    [ notification ]
+
+                                Nothing ->
+                                    []
+                            , newDataAndCommand.command
                             )
 
                         _ ->
@@ -545,7 +569,9 @@ updateNoSelectedRole message notSelectedRoleData =
         ( SelectTeam teamId, NotSelectedRolePlayer record ) ->
             ( NotSelectedRole (NotSelectedRolePlayer { record | joining = True })
             , [ "チームに参加中……" ]
-            , Graphql.Http.mutationRequest apiUrl (Data.joinTeamAndSetPlayerRole record.accessToken teamId)
+            , Graphql.Http.mutationRequest
+                Data.apiUrl
+                (Data.joinTeamAndSetPlayerRole record.accessToken teamId)
                 |> Graphql.Http.send JoinTeamResponse
             )
 
@@ -594,33 +620,59 @@ updateManager message logInData =
     case ( message, logInData.pageModel ) of
         ( UrlChange url, _ ) ->
             let
-                ( pageModel, command ) =
+                ( pageModel, newDataAndCommand ) =
                     pageLocationToInitManagerPageModel logInData.manager
                         (PageLocation.fromUrl url)
+                        |> Tuple.mapSecond subCommandToNewDataAndCommand
             in
-            ( { logInData | pageModel = pageModel }
-            , []
-            , command
+            ( { logInData
+                | pageModel = pageModel
+                , manager =
+                    newDataAndCommand.newUser
+                        |> Maybe.andThen Data.userGetManager
+                        |> Maybe.withDefault logInData.manager
+              }
+            , case newDataAndCommand.newNotification of
+                Just notification ->
+                    [ notification ]
+
+                Nothing ->
+                    []
+            , newDataAndCommand.command
             )
 
         ( MessageManagerMyPage pageMessage, PageManagerMyPage pageModel ) ->
             let
-                ( newMyPageModel, command ) =
-                    ManagerPage.MyPage.update pageMessage pageModel
+                ( newMyPageModel, newDataAndCommand ) =
+                    ManagerPage.MyPage.update logInData.manager pageMessage pageModel
+                        |> Tuple.mapSecond
+                            (SubCommand.map MessageManagerMyPage
+                                >> subCommandToNewDataAndCommand
+                            )
             in
-            ( { logInData | pageModel = PageManagerMyPage newMyPageModel }
+            ( { logInData
+                | pageModel = PageManagerMyPage newMyPageModel
+                , manager =
+                    newDataAndCommand.newUser
+                        |> Maybe.andThen Data.userGetManager
+                        |> Maybe.withDefault logInData.manager
+              }
             , []
-            , command |> Cmd.map MessageManagerMyPage
+            , newDataAndCommand.command
             )
 
         ( MessageManagerTeam pageMessage, PageManagerTeam pageModel ) ->
             let
-                ( newPageModel, command ) =
+                ( newPageModel, newDataAndCommand ) =
                     ManagerPage.Team.update pageMessage pageModel
+                        |> Tuple.mapSecond
+                            (SubCommand.map MessageManagerTeam
+                                >> subCommandToNewDataAndCommand
+                            )
             in
             ( { logInData | pageModel = PageManagerTeam newPageModel }
             , []
-            , command |> Cmd.map MessageManagerTeam
+            , newDataAndCommand.command
             )
 
         ( _, _ ) ->
@@ -678,6 +730,59 @@ updatePlayer message logInData =
             ( logInData, [], Cmd.none )
 
 
+subCommandToNewDataAndCommand :
+    SubCommand.SubCommand Message
+    ->
+        { newNotification : Maybe String
+        , newTeam : Maybe Data.TeamData
+        , newUser : Maybe Data.UserData
+        , command : Cmd Message
+        }
+subCommandToNewDataAndCommand subCommand =
+    case subCommand of
+        SubCommand.AddNotification notification ->
+            { newNotification = Just notification
+            , newTeam = Nothing
+            , newUser = Nothing
+            , command = Cmd.none
+            }
+
+        SubCommand.ChangeInputText idAndText ->
+            { newNotification = Nothing
+            , newTeam = Nothing
+            , newUser = Nothing
+            , command = setText idAndText
+            }
+
+        SubCommand.Command command ->
+            { newNotification = Nothing
+            , newTeam = Nothing
+            , newUser = Nothing
+            , command = command
+            }
+
+        SubCommand.UpdateUser user ->
+            { newNotification = Nothing
+            , newTeam = Nothing
+            , newUser = Just user
+            , command = Cmd.none
+            }
+
+        SubCommand.UpdateTeam teamData ->
+            { newNotification = Nothing
+            , newTeam = Just teamData
+            , newUser = Nothing
+            , command = Cmd.none
+            }
+
+        SubCommand.None ->
+            { newNotification = Nothing
+            , newTeam = Nothing
+            , newUser = Nothing
+            , command = Cmd.none
+            }
+
+
 view : Model -> Browser.Document Message
 view (Model record) =
     { title = "TEAMe"
@@ -698,7 +803,7 @@ view (Model record) =
             PlayerLogIn playerLogInData ->
                 playerLogInView playerLogInData
          ]
-            ++ (record.messageList
+            ++ (record.notificationList
                     |> List.map
                         (\message -> Html.Styled.div [] [ Html.Styled.text message ])
                )
@@ -832,7 +937,7 @@ createTeamView creating teamName =
 
          else
             [ Html.Styled.div [] [ Html.Styled.text "監督はまず、チームをつくります。チーム名は?" ]
-            , Style.inputText "team-name" InputTeamName
+            , Style.inputText "team-name" "team-name" InputTeamName
             , Style.conditionButton
                 (if Data.validateTeamName teamName then
                     Just CreateTeam
@@ -877,7 +982,7 @@ managerLogInView : ManagerLogInData -> Html.Styled.Html Message
 managerLogInView logInData =
     case logInData.pageModel of
         PageManagerMyPage model ->
-            ManagerPage.MyPage.view model
+            ManagerPage.MyPage.view logInData.manager model
                 |> Html.Styled.map MessageManagerMyPage
 
         PageManagerTeam model ->

@@ -1,4 +1,4 @@
-module Style exposing (conditionButton, header, inputText, managerBottomNavigation, normalButton, playerBottomNavigation, userImage)
+module Style exposing (conditionButton, header, inputText, managerBottomNavigation, normalButton, pageContainer, playerBottomNavigation, userImage)
 
 import Css
 import Css.Transitions
@@ -7,6 +7,18 @@ import Html.Styled as S
 import Html.Styled.Attributes as A
 import Html.Styled.Events as E
 import PageLocation
+
+
+pageContainer : List (S.Html message) -> S.Html message
+pageContainer children =
+    S.div
+        [ A.css
+            [ Css.property "display" "grid"
+            , Css.height (Css.pct 100)
+            , Css.property "grid-auto-flow" "column"
+            ]
+        ]
+        children
 
 
 header : Maybe Data.UserData -> S.Html message
@@ -95,10 +107,11 @@ userImage { name, imageFileHash } =
         []
 
 
-inputText : String -> (String -> message) -> S.Html message
-inputText name messageFunction =
+inputText : String -> String -> (String -> message) -> S.Html message
+inputText id name messageFunction =
     S.input
         [ A.type_ "text"
+        , A.id id
         , A.name name
         , E.onInput messageFunction
         , A.css

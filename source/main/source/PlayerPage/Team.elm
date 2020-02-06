@@ -1,4 +1,4 @@
-module PlayerPage.Team exposing (Command, Message, Model, init, update, view)
+module PlayerPage.Team exposing (Message, Model, init, update, view)
 
 import Data
 import Html.Styled as S
@@ -13,18 +13,14 @@ type Message
     = Message
 
 
-type Command
-    = Command
-
-
-update : Message -> Model -> ( Model, Maybe Command )
+update : Message -> Model -> ( Model, Cmd Message )
 update message model =
-    ( model, Nothing )
+    ( model, Cmd.none )
 
 
-init : Data.Player -> ( Model, Maybe Command )
+init : Data.Player -> ( Model, Cmd Message )
 init player =
-    ( Model { player = player }, Nothing )
+    ( Model { player = player }, Cmd.none )
 
 
 view : Model -> S.Html Message

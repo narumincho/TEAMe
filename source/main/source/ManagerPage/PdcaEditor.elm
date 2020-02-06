@@ -1,4 +1,4 @@
-module ManagerPage.PdcaEditor exposing (Message(..), Model, init, view)
+module ManagerPage.PdcaEditor exposing (Message(..), Model, init, update, view)
 
 import Html.Styled as S
 
@@ -16,6 +16,11 @@ init =
     ( Model
     , Cmd.none
     )
+
+
+update : Message -> Model -> ( Model, Cmd Message )
+update message model =
+    ( model, Cmd.none )
 
 
 view : Model -> S.Html Message

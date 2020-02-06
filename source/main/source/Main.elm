@@ -105,14 +105,14 @@ type NotSelectedRoleData
 type alias ManagerLogInData =
     { accessToken : Data.AccessToken
     , manager : Data.Manager
-    , pageModel : PageModel
+    , pageModel : ManagerPageModel
     }
 
 
 type alias PlayerLogInData =
     { accessToken : Data.AccessToken
     , userData : Data.Player
-    , pageModel : PageModel
+    , pageModel : PlayerPageModel
     }
 
 
@@ -122,11 +122,14 @@ type LogInViewModel
     | ErrorLogIn String
 
 
-type PageModel
+type PlayerPageModel
     = PagePlayerMyPage PlayerPage.MyPage.Model
     | PagePlayerNote PlayerPage.Note.Model
     | PagePlayerTeam PlayerPage.Team.Model
-    | PageManagerMyPage ManagerPage.MyPage.Model
+
+
+type ManagerPageModel
+    = PageManagerMyPage ManagerPage.MyPage.Model
     | PageManagerTeam ManagerPage.Team.Model
 
 
@@ -136,7 +139,7 @@ type Message
     | MessagePlayerMyPage PlayerPage.MyPage.Message
     | MessagePlayerNote PlayerPage.Note.Message
     | MessagePlayerTeam PlayerPage.Team.Message
-    | MessageManagerPage ManagerPage.MyPage.Message
+    | MessageManagerMyPage ManagerPage.MyPage.Message
     | MessageManagerTeam ManagerPage.Team.Message
     | RequestLineLogInUrl
     | ResponseLineLogInUrl (Result (Graphql.Http.Error String) String)
@@ -228,48 +231,40 @@ waitUserModelAndCommand pageLocation accessToken =
     )
 
 
-pageLocationToInitPageModel : Data.UserData -> PageLocation.PageLocation -> Maybe ( PageModel, Cmd Message )
-pageLocationToInitPageModel userData pageLocation =
-    case ( userData, pageLocation ) of
-        ( Data.RolePlayer player, PageLocation.Top ) ->
+pageLocationToInitPlayerPageModel : Data.Player -> PageLocation.PageLocation -> ( PlayerPageModel, Cmd Message )
+pageLocationToInitPlayerPageModel player pageLocation =
+    case pageLocation of
+        PageLocation.Top ->
             PlayerPage.MyPage.init player
-                |> Tuple.mapBoth PagePlayerMyPage (always Cmd.none)
-                |> Just
+                |> Tuple.mapBoth PagePlayerMyPage (Cmd.map MessagePlayerMyPage)
 
-        ( Data.RolePlayer player, PageLocation.PlayerNote ) ->
+        PageLocation.PlayerNote ->
             PlayerPage.Note.init player
-                |> Tuple.mapBoth PagePlayerNote (always Cmd.none)
-                |> Just
+                |> Tuple.mapBoth PagePlayerNote (Cmd.map MessagePlayerNote)
 
-        ( Data.RolePlayer player, PageLocation.Team ) ->
+        PageLocation.Team ->
             PlayerPage.Team.init player
-                |> Tuple.mapBoth PagePlayerTeam (always Cmd.none)
-                |> Just
+                |> Tuple.mapBoth PagePlayerTeam (Cmd.map MessagePlayerTeam)
 
-        ( Data.RoleManager manager, PageLocation.Top ) ->
+        _ ->
+            PlayerPage.MyPage.init player
+                |> Tuple.mapBoth PagePlayerMyPage (Cmd.map MessagePlayerMyPage)
+
+
+pageLocationToInitManagerPageModel : Data.Manager -> PageLocation.PageLocation -> ( ManagerPageModel, Cmd Message )
+pageLocationToInitManagerPageModel manager pageLocation =
+    case pageLocation of
+        PageLocation.Top ->
             ManagerPage.MyPage.init manager
-                |> Tuple.mapBoth PageManagerMyPage (always Cmd.none)
-                |> Just
+                |> Tuple.mapBoth PageManagerMyPage (Cmd.map MessageManagerMyPage)
 
-        ( Data.RoleManager manager, PageLocation.Team ) ->
+        PageLocation.Team ->
             ManagerPage.Team.init manager
-                |> Tuple.mapBoth PageManagerTeam (always Cmd.none)
-                |> Just
+                |> Tuple.mapBoth PageManagerTeam (Cmd.map MessageManagerTeam)
 
-        ( _, _ ) ->
-            Nothing
-
-
-playerTopPageModel : Data.Player -> ( PageModel, Cmd Message )
-playerTopPageModel player =
-    PlayerPage.MyPage.init player
-        |> Tuple.mapBoth PagePlayerMyPage (always Cmd.none)
-
-
-managerTopPageModel : Data.Manager -> ( PageModel, Cmd Message )
-managerTopPageModel manager =
-    ManagerPage.MyPage.init manager
-        |> Tuple.mapBoth PageManagerMyPage (always Cmd.none)
+        _ ->
+            ManagerPage.MyPage.init manager
+                |> Tuple.mapBoth PageManagerMyPage (Cmd.map MessageManagerMyPage)
 
 
 update : Message -> Model -> ( Model, Cmd Message )
@@ -425,8 +420,7 @@ responseUserData waitUserData userData =
         Data.RoleManager manager ->
             let
                 ( pageModel, command ) =
-                    pageLocationToInitPageModel userData waitUserData.pageLocation
-                        |> Maybe.withDefault (managerTopPageModel manager)
+                    pageLocationToInitManagerPageModel manager waitUserData.pageLocation
             in
             ( ManagerLogIn
                 { accessToken = waitUserData.accessToken
@@ -440,8 +434,7 @@ responseUserData waitUserData userData =
         Data.RolePlayer player ->
             let
                 ( pageModel, command ) =
-                    pageLocationToInitPageModel userData waitUserData.pageLocation
-                        |> Maybe.withDefault (playerTopPageModel player)
+                    pageLocationToInitPlayerPageModel player waitUserData.pageLocation
             in
             ( PlayerLogIn
                 { accessToken = waitUserData.accessToken
@@ -522,7 +515,7 @@ updateNoSelectedRole message notSelectedRoleData =
                         Data.RoleManager managerUser ->
                             let
                                 ( pageModel, command ) =
-                                    managerTopPageModel managerUser
+                                    pageLocationToInitManagerPageModel managerUser PageLocation.Top
                             in
                             ( ManagerLogIn
                                 { accessToken = record.accessToken
@@ -561,44 +554,32 @@ updateManager message logInRecord =
         ( UrlChange url, _ ) ->
             let
                 ( pageModel, command ) =
-                    pageLocationToInitPageModel
-                        (Data.RoleManager logInRecord.manager)
+                    pageLocationToInitManagerPageModel logInRecord.manager
                         (PageLocation.fromUrl url)
-                        |> Maybe.withDefault (managerTopPageModel logInRecord.manager)
             in
             ( { logInRecord | pageModel = pageModel }
             , []
             , command
             )
 
-        ( MessagePlayerMyPage pageMessage, PagePlayerMyPage pageModel ) ->
+        ( MessageManagerMyPage pageMessage, PageManagerMyPage pageModel ) ->
             let
                 ( newMyPageModel, command ) =
-                    PlayerPage.MyPage.update pageMessage pageModel
+                    ManagerPage.MyPage.update pageMessage pageModel
             in
-            ( { logInRecord | pageModel = PagePlayerMyPage newMyPageModel }
+            ( { logInRecord | pageModel = PageManagerMyPage newMyPageModel }
             , []
-            , command |> Maybe.map myPageCommandToCommand |> Maybe.withDefault Cmd.none
+            , command |> Cmd.map MessageManagerMyPage
             )
 
-        ( MessagePlayerNote pageMessage, PagePlayerNote pageModel ) ->
+        ( MessageManagerTeam pageMessage, PageManagerTeam pageModel ) ->
             let
                 ( newPageModel, command ) =
-                    PlayerPage.Note.update pageMessage pageModel
+                    ManagerPage.Team.update pageMessage pageModel
             in
-            ( { logInRecord | pageModel = PagePlayerNote newPageModel }
+            ( { logInRecord | pageModel = PageManagerTeam newPageModel }
             , []
-            , command |> Maybe.map noteCommandToCommand |> Maybe.withDefault Cmd.none
-            )
-
-        ( MessagePlayerTeam pageMessage, PagePlayerTeam pageModel ) ->
-            let
-                ( newPageModel, command ) =
-                    PlayerPage.Team.update pageMessage pageModel
-            in
-            ( { logInRecord | pageModel = PagePlayerTeam newPageModel }
-            , []
-            , command |> Maybe.map teamCommandToCommand |> Maybe.withDefault Cmd.none
+            , command |> Cmd.map MessageManagerTeam
             )
 
         ( _, _ ) ->
@@ -618,7 +599,7 @@ updatePlayer message logInData =
             in
             ( { logInData | pageModel = PagePlayerMyPage newMyPageModel }
             , []
-            , command |> Maybe.map myPageCommandToCommand |> Maybe.withDefault Cmd.none
+            , command |> Cmd.map MessagePlayerMyPage
             )
 
         ( MessagePlayerNote pageMessage, PagePlayerNote pageModel ) ->
@@ -628,7 +609,7 @@ updatePlayer message logInData =
             in
             ( { logInData | pageModel = PagePlayerNote newPageModel }
             , []
-            , command |> Maybe.map noteCommandToCommand |> Maybe.withDefault Cmd.none
+            , command |> Cmd.map MessagePlayerNote
             )
 
         ( MessagePlayerTeam pageMessage, PagePlayerTeam pageModel ) ->
@@ -638,26 +619,11 @@ updatePlayer message logInData =
             in
             ( { logInData | pageModel = PagePlayerTeam newPageModel }
             , []
-            , command |> Maybe.map teamCommandToCommand |> Maybe.withDefault Cmd.none
+            , command |> Cmd.map MessagePlayerTeam
             )
 
         ( _, _ ) ->
             ( logInData, [], Cmd.none )
-
-
-myPageCommandToCommand : PlayerPage.MyPage.Command -> Cmd Message
-myPageCommandToCommand _ =
-    Cmd.none
-
-
-noteCommandToCommand : PlayerPage.Note.Command -> Cmd Message
-noteCommandToCommand _ =
-    Cmd.none
-
-
-teamCommandToCommand : PlayerPage.Team.Command -> Cmd Message
-teamCommandToCommand _ =
-    Cmd.none
 
 
 view : Model -> Browser.Document Message
@@ -846,13 +812,27 @@ createTeamView creating teamName =
 
 managerLogInView : ManagerLogInData -> Html.Styled.Html Message
 managerLogInView logInData =
-    Html.Styled.div
-        []
-        [ Html.Styled.text "指導者のページ" ]
+    case logInData.pageModel of
+        PageManagerMyPage model ->
+            ManagerPage.MyPage.view model
+                |> Html.Styled.map MessageManagerMyPage
+
+        PageManagerTeam model ->
+            ManagerPage.Team.view model
+                |> Html.Styled.map MessageManagerTeam
 
 
 playerLogInView : PlayerLogInData -> Html.Styled.Html Message
 playerLogInView logInData =
-    Html.Styled.div
-        []
-        [ Html.Styled.text "選手のページ" ]
+    case logInData.pageModel of
+        PagePlayerMyPage model ->
+            PlayerPage.MyPage.view model
+                |> Html.Styled.map MessagePlayerMyPage
+
+        PagePlayerNote model ->
+            PlayerPage.Note.view model
+                |> Html.Styled.map MessagePlayerNote
+
+        PagePlayerTeam model ->
+            PlayerPage.Team.view model
+                |> Html.Styled.map MessagePlayerTeam

@@ -1,4 +1,4 @@
-module ManagerPage.MyPage exposing (Message(..), Model, init, view)
+module ManagerPage.MyPage exposing (Message(..), Model, init, update, view)
 
 import Data
 import Html.Styled as S
@@ -16,6 +16,11 @@ type Message
 init : Data.Manager -> ( Model, Cmd Message )
 init manager =
     ( Model { manager = manager }, Cmd.none )
+
+
+update : Message -> Model -> ( Model, Cmd Message )
+update message model =
+    ( model, Cmd.none )
 
 
 view : Model -> S.Html Message

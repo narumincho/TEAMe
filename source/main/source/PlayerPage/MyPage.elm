@@ -1,4 +1,4 @@
-module PlayerPage.MyPage exposing (Command, Message, Model, init, update, view)
+module PlayerPage.MyPage exposing (Message, Model, init, update, view)
 
 import Data
 import Html.Styled
@@ -13,18 +13,14 @@ type Message
     = Message
 
 
-type Command
-    = Command
-
-
-init : Data.Player -> ( Model, Maybe Command )
+init : Data.Player -> ( Model, Cmd Message )
 init player =
-    ( Model { player = player }, Nothing )
+    ( Model { player = player }, Cmd.none )
 
 
-update : Message -> Model -> ( Model, Maybe Command )
+update : Message -> Model -> ( Model, Cmd Message )
 update _ model =
-    ( model, Nothing )
+    ( model, Cmd.none )
 
 
 view : Model -> Html.Styled.Html Message

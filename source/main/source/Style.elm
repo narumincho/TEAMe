@@ -1,4 +1,4 @@
-module Style exposing (conditionButton, header, inputText, managerBottomNavigation, normalButton, pageContainer, playerBottomNavigation, userImage)
+module Style exposing (alignContentEnd, animationFillModeForwards, conditionButton, displayGrid, gridAutoFlowColumn, gridCell, header, inputText, managerBottomNavigation, normalButton, pageContainer, pageMainViewContainer, playerBottomNavigation, themeColor, userImage)
 
 import Css
 import Css.Transitions
@@ -9,23 +9,43 @@ import Html.Styled.Events as E
 import PageLocation
 
 
+themeColor : Css.Color
+themeColor =
+    Css.rgb 167 216 110
+
+
 pageContainer : List (S.Html message) -> S.Html message
-pageContainer children =
+pageContainer =
     S.div
         [ A.css
-            [ Css.property "display" "grid"
+            [ displayGrid
             , Css.height (Css.pct 100)
-            , Css.property "grid-auto-flow" "column"
+            , gridCellHeightList [ "max-content", "1fr", "max-content" ]
+            , gridCell { x = 0, y = 0, width = 1, height = 1 }
             ]
         ]
-        children
 
 
 header : Maybe Data.UserData -> S.Html message
 header userMaybe =
     S.div
-        []
-        ([ S.div [] [ S.text "TEAMe" ]
+        [ A.css
+            [ displayGrid
+            , gridAutoFlowColumn
+            , Css.backgroundColor themeColor
+            , gridCell { x = 0, y = 0, width = 1, height = 1 }
+            , gridCellWidthList [ "1fr", "max-content" ]
+            , Css.padding (Css.rem 0.2)
+            ]
+        ]
+        ([ S.div
+            [ A.css
+                [ Css.color (Css.rgb 255 255 255)
+                , Css.fontWeight Css.bold
+                , Css.fontSize (Css.rem 1.5)
+                ]
+            ]
+            [ S.text "TEAMe" ]
          ]
             ++ (case userMaybe of
                     Just user ->
@@ -37,23 +57,60 @@ header userMaybe =
         )
 
 
+pageMainViewContainer : List (S.Html message) -> S.Html message
+pageMainViewContainer =
+    S.div
+        [ A.css
+            [ gridCell { x = 0, y = 1, width = 1, height = 1 }
+            ]
+        ]
+
+
 playerBottomNavigation : S.Html message
 playerBottomNavigation =
     S.div
-        []
-        [ S.a [ A.href (PageLocation.Top |> PageLocation.toUrlAsString) ] [ S.text "マイページ" ]
-        , S.a [ A.href (PageLocation.PlayerNote |> PageLocation.toUrlAsString) ] [ S.text "ノート" ]
-        , S.a [ A.href (PageLocation.Team |> PageLocation.toUrlAsString) ] [ S.text "チーム" ]
+        [ A.css [ bottomNavigationStyle ]
+        ]
+        [ navigationItem PageLocation.Top "マイページ"
+        , navigationItem PageLocation.PlayerNote "ノート"
+        , navigationItem PageLocation.Team "チーム"
         ]
 
 
 managerBottomNavigation : S.Html message
 managerBottomNavigation =
     S.div
-        []
-        [ S.a [ A.href (PageLocation.Top |> PageLocation.toUrlAsString) ] [ S.text "マイページ" ]
-        , S.a [ A.href (PageLocation.Team |> PageLocation.toUrlAsString) ] [ S.text "チーム" ]
+        [ A.css [ bottomNavigationStyle ]
         ]
+        [ navigationItem PageLocation.Top "マイページ"
+        , navigationItem PageLocation.Team "チーム"
+        ]
+
+
+bottomNavigationStyle : Css.Style
+bottomNavigationStyle =
+    Css.batch
+        [ gridCell { x = 0, y = 2, width = 1, height = 1 }
+        , displayGrid
+        , gridAutoFlowColumn
+        , Css.height (Css.rem 3)
+        ]
+
+
+navigationItem : PageLocation.PageLocation -> String -> S.Html message
+navigationItem pageLocation text =
+    S.a
+        [ A.href (PageLocation.toUrlAsString pageLocation)
+        , A.css
+            [ displayGrid
+            , Css.textDecoration Css.none
+            , Css.color (Css.rgb 0 0 0)
+            , Css.backgroundColor themeColor
+            , Css.justifyContent Css.center
+            , Css.alignItems Css.center
+            ]
+        ]
+        [ S.text text ]
 
 
 normalButton : message -> String -> S.Html message
@@ -137,3 +194,58 @@ inputText id name messageFunction =
             ]
         ]
         []
+
+
+displayGrid : Css.Style
+displayGrid =
+    Css.property "display" "grid"
+
+
+gridAutoFlowColumn : Css.Style
+gridAutoFlowColumn =
+    Css.property "grid-auto-flow" "column"
+
+
+gap : Int -> Css.Style
+gap number =
+    Css.property "gap" (String.fromInt number ++ "px")
+
+
+gridCellHeightList : List String -> Css.Style
+gridCellHeightList list =
+    Css.property "grid-template-rows" (list |> String.join " ")
+
+
+gridCellWidthList : List String -> Css.Style
+gridCellWidthList list =
+    Css.property "grid-template-columns" (list |> String.join " ")
+
+
+gridCell : { x : Int, y : Int, width : Int, height : Int } -> Css.Style
+gridCell { x, y, width, height } =
+    Css.batch
+        [ Css.property "grid-column"
+            (String.fromInt (1 + x) ++ " / " ++ String.fromInt (1 + x + width))
+        , Css.property "grid-row"
+            (String.fromInt (1 + y) ++ " / " ++ String.fromInt (1 + y + height))
+        ]
+
+
+alignContentEnd : Css.Style
+alignContentEnd =
+    Css.property "align-content" "end"
+
+
+userSelectNone : Css.Style
+userSelectNone =
+    Css.property "user-select" "none"
+
+
+objectFixContain : Css.Style
+objectFixContain =
+    Css.property "object-fit" "contain"
+
+
+animationFillModeForwards : Css.Style
+animationFillModeForwards =
+    Css.property "animation-fill-mode" "forwards"

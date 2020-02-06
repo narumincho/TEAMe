@@ -59,8 +59,7 @@ view manager model =
 
 mainView : Data.Manager -> Model -> S.Html Message
 mainView manager (Model record) =
-    S.div
-        []
+    Style.pageMainViewContainer
         ([ S.div [] [ S.text "指導目標" ]
          , Style.inputText goalInputDomId "goal" InputGoal
          ]

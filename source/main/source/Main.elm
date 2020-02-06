@@ -5,6 +5,7 @@ import Api.Mutation
 import Browser
 import Browser.Navigation
 import Css
+import Css.Animations
 import Data
 import Graphql.Http
 import Graphql.SelectionSet
@@ -787,7 +788,7 @@ view : Model -> Browser.Document Message
 view (Model record) =
     { title = "TEAMe"
     , body =
-        ([ case record.mainModel of
+        [ case record.mainModel of
             NoLogIn noLogInRecord ->
                 logInView noLogInRecord.logInViewModel
 
@@ -802,12 +803,8 @@ view (Model record) =
 
             PlayerLogIn playerLogInData ->
                 playerLogInView playerLogInData
-         ]
-            ++ (record.notificationList
-                    |> List.map
-                        (\message -> Html.Styled.div [] [ Html.Styled.text message ])
-               )
-        )
+        , notificationView record.notificationList
+        ]
             |> List.map Html.Styled.toUnstyled
     }
 
@@ -1004,3 +1001,46 @@ playerLogInView logInData =
         PagePlayerTeam model ->
             PlayerPage.Team.view model
                 |> Html.Styled.map MessagePlayerTeam
+
+
+notificationView : List String -> Html.Styled.Html Message
+notificationView notificationList =
+    Html.Styled.div
+        [ Html.Styled.Attributes.css
+            [ Style.displayGrid
+            , Style.gridCell { x = 0, y = 0, width = 1, height = 1 }
+            , Css.justifyContent Css.end
+            , Style.alignContentEnd
+            , Css.paddingBottom (Css.rem 5)
+            ]
+        ]
+        (notificationList
+            |> List.map
+                (\notification ->
+                    Html.Styled.div
+                        [ Html.Styled.Attributes.css
+                            [ Css.backgroundColor Style.themeColor
+                            , Css.padding (Css.rem 0.2)
+                            , Css.animationName
+                                (Css.Animations.keyframes
+                                    [ ( 0
+                                      , [ Css.Animations.backgroundColor Style.themeColor
+                                        , Css.Animations.property "color" "#000"
+                                        ]
+                                      )
+                                    , ( 100
+                                      , [ Css.Animations.backgroundColor (Css.rgba 0 0 0 0)
+                                        , Css.Animations.property "color" "#0000"
+                                        ]
+                                      )
+                                    ]
+                                )
+                            , Css.animationDelay (Css.ms 0)
+                            , Css.animationIterationCount (Css.int 1)
+                            , Css.animationDuration (Css.ms 5000)
+                            , Style.animationFillModeForwards
+                            ]
+                        ]
+                        [ Html.Styled.text notification ]
+                )
+        )

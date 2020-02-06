@@ -25,9 +25,8 @@ update _ model =
 
 view : Model -> Html.Styled.Html Message
 view (Model record) =
-    Html.Styled.div
-        []
+    Style.pageContainer
         [ Style.header (Just (Data.RolePlayer record.player))
-        , Html.Styled.text "選手のマイページ"
+        , Style.pageMainViewContainer [ Html.Styled.text "選手のマイページ" ]
         , Style.playerBottomNavigation
         ]

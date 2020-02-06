@@ -26,9 +26,8 @@ update message model =
 
 view : Model -> S.Html Message
 view (Model record) =
-    S.div
-        []
+    Style.pageContainer
         [ Style.header (Just (Data.RoleManager record.manager))
-        , S.text "導者のチームページ"
+        , Style.pageMainViewContainer [ S.text "導者のチームページ" ]
         , Style.managerBottomNavigation
         ]

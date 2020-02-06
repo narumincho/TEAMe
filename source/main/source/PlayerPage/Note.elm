@@ -25,9 +25,8 @@ init player =
 
 view : Model -> S.Html Message
 view (Model record) =
-    S.div
-        []
+    Style.pageContainer
         [ Style.header (Just (Data.RolePlayer record.player))
-        , S.div [] [ S.text "PDCAを見るためのノート" ]
+        , Style.pageMainViewContainer [ S.text "PDCAを見るためのノート" ]
         , Style.playerBottomNavigation
         ]

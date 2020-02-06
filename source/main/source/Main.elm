@@ -89,16 +89,17 @@ type NotSelectedRoleData
         { accessToken : Data.AccessToken
         , userData : Data.NoRoleUser
         }
-    | NotSelectedRoleDataSelectManager
+    | NotSelectedRoleManager
         { accessToken : Data.AccessToken
         , userData : Data.NoRoleUser
         , teamName : String
         , creating : Bool
         }
-    | NotSelectedRoleDataSelectPlayer
+    | NotSelectedRolePlayer
         { accessToken : Data.AccessToken
         , userData : Data.NoRoleUser
         , teamList : Maybe (List Data.TeamData)
+        , joining : Bool
         }
 
 
@@ -149,6 +150,7 @@ type Message
     | CreateTeam
     | CreateTeamResponse (Result (Graphql.Http.Error Data.UserData) Data.UserData)
     | AllTeamResponse (Result (Graphql.Http.Error (List Data.TeamData)) (List Data.TeamData))
+    | SelectTeam Data.TeamId
     | LogInSampleUser Data.AccessToken
 
 
@@ -453,7 +455,7 @@ updateNoSelectedRole message notSelectedRoleData =
             case role of
                 Api.Enum.Role.Manager ->
                     ( NotSelectedRole
-                        (NotSelectedRoleDataSelectManager
+                        (NotSelectedRoleManager
                             { accessToken = record.accessToken
                             , userData = record.userData
                             , teamName = ""
@@ -466,10 +468,11 @@ updateNoSelectedRole message notSelectedRoleData =
 
                 Api.Enum.Role.Player ->
                     ( NotSelectedRole
-                        (NotSelectedRoleDataSelectPlayer
+                        (NotSelectedRolePlayer
                             { accessToken = record.accessToken
                             , userData = record.userData
                             , teamList = Nothing
+                            , joining = False
                             }
                         )
                     , []
@@ -477,28 +480,14 @@ updateNoSelectedRole message notSelectedRoleData =
                         |> Graphql.Http.send AllTeamResponse
                     )
 
-        ( AllTeamResponse allTeamResult, NotSelectedRoleDataSelectPlayer record ) ->
-            case allTeamResult of
-                Ok allTeam ->
-                    ( NotSelectedRole (NotSelectedRoleDataSelectPlayer { record | teamList = Just allTeam })
-                    , []
-                    , Cmd.none
-                    )
-
-                Err _ ->
-                    ( NotSelectedRole (NotSelectedRoleDataSelectPlayer record)
-                    , [ "チームの一覧取得に失敗" ]
-                    , Cmd.none
-                    )
-
-        ( InputTeamName teamName, NotSelectedRoleDataSelectManager record ) ->
-            ( NotSelectedRole (NotSelectedRoleDataSelectManager { record | teamName = teamName })
+        ( InputTeamName teamName, NotSelectedRoleManager record ) ->
+            ( NotSelectedRole (NotSelectedRoleManager { record | teamName = teamName })
             , []
             , Cmd.none
             )
 
-        ( CreateTeam, NotSelectedRoleDataSelectManager record ) ->
-            ( NotSelectedRole (NotSelectedRoleDataSelectManager { record | creating = True })
+        ( CreateTeam, NotSelectedRoleManager record ) ->
+            ( NotSelectedRole (NotSelectedRoleManager { record | creating = True })
             , []
             , if Data.validateTeamName record.teamName then
                 Graphql.Http.mutationRequest apiUrl (Data.createTeamAndSetManagerRole record.accessToken record.teamName)
@@ -508,7 +497,7 @@ updateNoSelectedRole message notSelectedRoleData =
                 Cmd.none
             )
 
-        ( CreateTeamResponse result, NotSelectedRoleDataSelectManager record ) ->
+        ( CreateTeamResponse result, NotSelectedRoleManager record ) ->
             case result of
                 Ok newUserData ->
                     case newUserData of
@@ -527,16 +516,36 @@ updateNoSelectedRole message notSelectedRoleData =
                             )
 
                         _ ->
-                            ( NotSelectedRole (NotSelectedRoleDataSelectManager { record | creating = False })
+                            ( NotSelectedRole (NotSelectedRoleManager { record | creating = False })
                             , [ "チーム作成時にユーザ情報の変更に失敗しました" ]
                             , Cmd.none
                             )
 
                 Err _ ->
-                    ( NotSelectedRole (NotSelectedRoleDataSelectManager { record | creating = False })
+                    ( NotSelectedRole (NotSelectedRoleManager { record | creating = False })
                     , [ "チームの作成に失敗しました" ]
                     , Cmd.none
                     )
+
+        ( AllTeamResponse allTeamResult, NotSelectedRolePlayer record ) ->
+            case allTeamResult of
+                Ok allTeam ->
+                    ( NotSelectedRole (NotSelectedRolePlayer { record | teamList = Just allTeam })
+                    , []
+                    , Cmd.none
+                    )
+
+                Err _ ->
+                    ( NotSelectedRole (NotSelectedRolePlayer record)
+                    , [ "チームの一覧取得に失敗" ]
+                    , Cmd.none
+                    )
+
+        ( SelectTeam teamId, NotSelectedRolePlayer record ) ->
+            ( NotSelectedRole (NotSelectedRolePlayer { record | joining = True })
+            , []
+            , Cmd.none
+            )
 
         ( _, _ ) ->
             ( NotSelectedRole notSelectedRoleData
@@ -760,24 +769,28 @@ notSelectedRoleDataView notSelectedRoleData =
                 , Style.normalButton (SelectRole Api.Enum.Role.Player) "選手"
                 ]
 
-        NotSelectedRoleDataSelectManager record ->
+        NotSelectedRoleManager record ->
             createTeamView record.creating record.teamName
 
-        NotSelectedRoleDataSelectPlayer record ->
+        NotSelectedRolePlayer record ->
             Html.Styled.div
                 []
                 [ Html.Styled.text "選手は所属するチームを選んでもらいます"
                 , Html.Styled.div
                     []
-                    [ Html.Styled.text
-                        (case record.teamList of
-                            Just _ ->
-                                "チームを取得した"
+                    (case record.teamList of
+                        Just teamList ->
+                            teamList
+                                |> List.map
+                                    (\team ->
+                                        Style.normalButton
+                                            (SelectTeam team.id)
+                                            team.name
+                                    )
 
-                            Nothing ->
-                                "チームを取得中……"
-                        )
-                    ]
+                        Nothing ->
+                            [ Html.Styled.text "チーム一覧を取得中……" ]
+                    )
                 ]
 
 

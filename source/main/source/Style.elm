@@ -1,4 +1,4 @@
-module Style exposing (conditionButton, inputText, managerBottomNavigation, normalButton, playerBottomNavigation, header, userImage)
+module Style exposing (conditionButton, header, inputText, managerBottomNavigation, normalButton, playerBottomNavigation, userImage)
 
 import Css
 import Css.Transitions
@@ -6,6 +6,7 @@ import Data
 import Html.Styled as S
 import Html.Styled.Attributes as A
 import Html.Styled.Events as E
+import PageLocation
 
 
 header : Maybe Data.UserData -> S.Html message
@@ -28,9 +29,9 @@ playerBottomNavigation : S.Html message
 playerBottomNavigation =
     S.div
         []
-        [ S.div [] [ S.text "マイページ" ]
-        , S.div [] [ S.text "ノート" ]
-        , S.div [] [ S.text "チーム" ]
+        [ S.a [ A.href (PageLocation.Top |> PageLocation.toUrlAsString) ] [ S.text "マイページ" ]
+        , S.a [ A.href (PageLocation.PlayerNote |> PageLocation.toUrlAsString) ] [ S.text "ノート" ]
+        , S.a [ A.href (PageLocation.Team |> PageLocation.toUrlAsString) ] [ S.text "チーム" ]
         ]
 
 
@@ -38,8 +39,8 @@ managerBottomNavigation : S.Html message
 managerBottomNavigation =
     S.div
         []
-        [ S.div [] [ S.text "マイページ" ]
-        , S.div [] [ S.text "チーム" ]
+        [ S.a [ A.href (PageLocation.Top |> PageLocation.toUrlAsString) ] [ S.text "マイページ" ]
+        , S.a [ A.href (PageLocation.Team |> PageLocation.toUrlAsString) ] [ S.text "チーム" ]
         ]
 
 

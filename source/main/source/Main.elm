@@ -112,7 +112,7 @@ type alias ManagerLogInData =
 
 type alias PlayerLogInData =
     { accessToken : Data.AccessToken
-    , userData : Data.Player
+    , player : Data.Player
     , pageModel : PlayerPageModel
     }
 
@@ -151,6 +151,7 @@ type Message
     | CreateTeamResponse (Result (Graphql.Http.Error Data.UserData) Data.UserData)
     | AllTeamResponse (Result (Graphql.Http.Error (List Data.TeamData)) (List Data.TeamData))
     | SelectTeam Data.TeamId
+    | JoinTeamResponse (Result (Graphql.Http.Error Data.UserData) Data.UserData)
     | LogInSampleUser Data.AccessToken
 
 
@@ -440,7 +441,7 @@ responseUserData waitUserData userData =
             in
             ( PlayerLogIn
                 { accessToken = waitUserData.accessToken
-                , userData = player
+                , player = player
                 , pageModel = pageModel
                 }
             , [ "選手としてログイン成功!" ]
@@ -488,7 +489,7 @@ updateNoSelectedRole message notSelectedRoleData =
 
         ( CreateTeam, NotSelectedRoleManager record ) ->
             ( NotSelectedRole (NotSelectedRoleManager { record | creating = True })
-            , []
+            , [ record.teamName ++ "を作成中……" ]
             , if Data.validateTeamName record.teamName then
                 Graphql.Http.mutationRequest apiUrl (Data.createTeamAndSetManagerRole record.accessToken record.teamName)
                     |> Graphql.Http.send CreateTeamResponse
@@ -497,8 +498,8 @@ updateNoSelectedRole message notSelectedRoleData =
                 Cmd.none
             )
 
-        ( CreateTeamResponse result, NotSelectedRoleManager record ) ->
-            case result of
+        ( CreateTeamResponse response, NotSelectedRoleManager record ) ->
+            case response of
                 Ok newUserData ->
                     case newUserData of
                         Data.RoleManager managerUser ->
@@ -543,9 +544,40 @@ updateNoSelectedRole message notSelectedRoleData =
 
         ( SelectTeam teamId, NotSelectedRolePlayer record ) ->
             ( NotSelectedRole (NotSelectedRolePlayer { record | joining = True })
-            , []
-            , Cmd.none
+            , [ "チームに参加中……" ]
+            , Graphql.Http.mutationRequest apiUrl (Data.joinTeamAndSetPlayerRole record.accessToken teamId)
+                |> Graphql.Http.send JoinTeamResponse
             )
+
+        ( JoinTeamResponse response, NotSelectedRolePlayer record ) ->
+            case response of
+                Ok newUserData ->
+                    case newUserData of
+                        Data.RolePlayer player ->
+                            let
+                                ( pageModel, command ) =
+                                    pageLocationToInitPlayerPageModel player PageLocation.Top
+                            in
+                            ( PlayerLogIn
+                                { accessToken = record.accessToken
+                                , player = player
+                                , pageModel = pageModel
+                                }
+                            , []
+                            , command
+                            )
+
+                        _ ->
+                            ( NotSelectedRole (NotSelectedRolePlayer { record | joining = False })
+                            , [ "チーム参加時にユーザ情報の変更に失敗しました" ]
+                            , Cmd.none
+                            )
+
+                Err _ ->
+                    ( NotSelectedRole (NotSelectedRolePlayer { record | joining = False })
+                    , [ "チームの参加に失敗しました" ]
+                    , Cmd.none
+                    )
 
         ( _, _ ) ->
             ( NotSelectedRole notSelectedRoleData
@@ -558,15 +590,15 @@ updateManager :
     Message
     -> ManagerLogInData
     -> ( ManagerLogInData, List String, Cmd Message )
-updateManager message logInRecord =
-    case ( message, logInRecord.pageModel ) of
+updateManager message logInData =
+    case ( message, logInData.pageModel ) of
         ( UrlChange url, _ ) ->
             let
                 ( pageModel, command ) =
-                    pageLocationToInitManagerPageModel logInRecord.manager
+                    pageLocationToInitManagerPageModel logInData.manager
                         (PageLocation.fromUrl url)
             in
-            ( { logInRecord | pageModel = pageModel }
+            ( { logInData | pageModel = pageModel }
             , []
             , command
             )
@@ -576,7 +608,7 @@ updateManager message logInRecord =
                 ( newMyPageModel, command ) =
                     ManagerPage.MyPage.update pageMessage pageModel
             in
-            ( { logInRecord | pageModel = PageManagerMyPage newMyPageModel }
+            ( { logInData | pageModel = PageManagerMyPage newMyPageModel }
             , []
             , command |> Cmd.map MessageManagerMyPage
             )
@@ -586,13 +618,13 @@ updateManager message logInRecord =
                 ( newPageModel, command ) =
                     ManagerPage.Team.update pageMessage pageModel
             in
-            ( { logInRecord | pageModel = PageManagerTeam newPageModel }
+            ( { logInData | pageModel = PageManagerTeam newPageModel }
             , []
             , command |> Cmd.map MessageManagerTeam
             )
 
         ( _, _ ) ->
-            ( logInRecord
+            ( logInData
             , []
             , Cmd.none
             )
@@ -601,6 +633,17 @@ updateManager message logInRecord =
 updatePlayer : Message -> PlayerLogInData -> ( PlayerLogInData, List String, Cmd Message )
 updatePlayer message logInData =
     case ( message, logInData.pageModel ) of
+        ( UrlChange url, _ ) ->
+            let
+                ( pageModel, command ) =
+                    pageLocationToInitPlayerPageModel logInData.player
+                        (PageLocation.fromUrl url)
+            in
+            ( { logInData | pageModel = pageModel }
+            , []
+            , command
+            )
+
         ( MessagePlayerMyPage pageMessage, PagePlayerMyPage pageModel ) ->
             let
                 ( newMyPageModel, command ) =
@@ -643,7 +686,7 @@ view (Model record) =
             NoLogIn noLogInRecord ->
                 logInView noLogInRecord.logInViewModel
 
-            WaitUser waitUserData ->
+            WaitUser _ ->
                 Html.Styled.text "ユーザーの情報を取得中…"
 
             NotSelectedRole notSelectedRoleData ->
@@ -762,9 +805,6 @@ notSelectedRoleDataView notSelectedRoleData =
                     , imageFileHash = record.userData.imageFileHash
                     }
                 , Html.Styled.text ("はじまして、" ++ record.userData.name ++ "さん。監督か 選手かを選んでください")
-                , Html.Styled.div
-                    []
-                    [ Html.Styled.text (Data.accessTokenToString record.accessToken) ]
                 , Style.normalButton (SelectRole Api.Enum.Role.Manager) "監督"
                 , Style.normalButton (SelectRole Api.Enum.Role.Player) "選手"
                 ]
@@ -773,25 +813,7 @@ notSelectedRoleDataView notSelectedRoleData =
             createTeamView record.creating record.teamName
 
         NotSelectedRolePlayer record ->
-            Html.Styled.div
-                []
-                [ Html.Styled.text "選手は所属するチームを選んでもらいます"
-                , Html.Styled.div
-                    []
-                    (case record.teamList of
-                        Just teamList ->
-                            teamList
-                                |> List.map
-                                    (\team ->
-                                        Style.normalButton
-                                            (SelectTeam team.id)
-                                            team.name
-                                    )
-
-                        Nothing ->
-                            [ Html.Styled.text "チーム一覧を取得中……" ]
-                    )
-                ]
+            joinTeamView record.userData record.teamList record.joining
 
 
 createTeamView : Bool -> String -> Html.Styled.Html Message
@@ -819,6 +841,34 @@ createTeamView creating teamName =
                     Nothing
                 )
                 "作成"
+            ]
+        )
+
+
+joinTeamView : Data.NoRoleUser -> Maybe (List Data.TeamData) -> Bool -> Html.Styled.Html Message
+joinTeamView noRoleUser teamListMaybe joining =
+    Html.Styled.div
+        []
+        (if joining then
+            [ Html.Styled.text "チームに参加中" ]
+
+         else
+            [ Html.Styled.text "選手は所属するチームを選んでもらいます"
+            , Html.Styled.div
+                []
+                (case teamListMaybe of
+                    Just teamList ->
+                        teamList
+                            |> List.map
+                                (\team ->
+                                    Style.normalButton
+                                        (SelectTeam team.id)
+                                        team.name
+                                )
+
+                    Nothing ->
+                        [ Html.Styled.text "チーム一覧を取得中……" ]
+                )
             ]
         )
 

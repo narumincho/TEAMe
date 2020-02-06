@@ -62,6 +62,6 @@ type alias JoinTeamAndSetPlayerRoleRequiredArguments =
   - teamId - チームID
 
 -}
-joinTeamAndSetPlayerRole : JoinTeamAndSetPlayerRoleRequiredArguments -> SelectionSet decodesTo Api.Object.Team -> SelectionSet decodesTo RootMutation
+joinTeamAndSetPlayerRole : JoinTeamAndSetPlayerRoleRequiredArguments -> SelectionSet decodesTo Api.Object.UserData -> SelectionSet decodesTo RootMutation
 joinTeamAndSetPlayerRole requiredArgs object_ =
     Object.selectionForCompositeField "joinTeamAndSetPlayerRole" [ Argument.required "accessToken" requiredArgs.accessToken Encode.string, Argument.required "teamId" requiredArgs.teamId Encode.string ] object_ identity

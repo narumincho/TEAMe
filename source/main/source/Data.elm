@@ -20,7 +20,7 @@ module Data exposing
     , timePosixFromGraphQLScalaValue
     , urlAsStringFromGraphQLScalaValue
     , validateTeamName
-    )
+    , joinTeamAndSetPlayerRole)
 
 import Api.Enum.Role
 import Api.Mutation
@@ -170,6 +170,15 @@ createTeamAndSetManagerRole accessToken teamName =
     Api.Mutation.createTeamAndSetManagerRole
         { accessToken = accessTokenToString accessToken
         , teamName = teamName
+        }
+        userDataQuery
+
+
+joinTeamAndSetPlayerRole : AccessToken -> TeamId -> Graphql.SelectionSet.SelectionSet UserData Graphql.Operation.RootMutation
+joinTeamAndSetPlayerRole accessToken (TeamId teamIdAsString) =
+    Api.Mutation.joinTeamAndSetPlayerRole
+        { accessToken = accessTokenToString accessToken
+        , teamId = teamIdAsString
         }
         userDataQuery
 

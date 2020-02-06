@@ -65,3 +65,37 @@ type alias JoinTeamAndSetPlayerRoleRequiredArguments =
 joinTeamAndSetPlayerRole : JoinTeamAndSetPlayerRoleRequiredArguments -> SelectionSet decodesTo Api.Object.UserData -> SelectionSet decodesTo RootMutation
 joinTeamAndSetPlayerRole requiredArgs object_ =
     Object.selectionForCompositeField "joinTeamAndSetPlayerRole" [ Argument.required "accessToken" requiredArgs.accessToken Encode.string, Argument.required "teamId" requiredArgs.teamId Encode.string ] object_ identity
+
+
+type alias UpdatePersonalGoalRequiredArguments =
+    { accessToken : String
+    , goal : String
+    }
+
+
+{-| 個人目標か指導目標を変更する
+
+  - accessToken - アクセストークン
+  - goal - 目標
+
+-}
+updatePersonalGoal : UpdatePersonalGoalRequiredArguments -> SelectionSet decodesTo Api.Object.UserData -> SelectionSet decodesTo RootMutation
+updatePersonalGoal requiredArgs object_ =
+    Object.selectionForCompositeField "updatePersonalGoal" [ Argument.required "accessToken" requiredArgs.accessToken Encode.string, Argument.required "goal" requiredArgs.goal Encode.string ] object_ identity
+
+
+type alias UpdateTeamGoalRequiredArguments =
+    { accessToken : String
+    , goal : String
+    }
+
+
+{-| チーム目標を変更する。変更できるのはチームの指導者か、選手である必要がある
+
+  - accessToken - アクセストークン
+  - goal - 目標
+
+-}
+updateTeamGoal : UpdateTeamGoalRequiredArguments -> SelectionSet decodesTo Api.Object.Team -> SelectionSet decodesTo RootMutation
+updateTeamGoal requiredArgs object_ =
+    Object.selectionForCompositeField "updateTeamGoal" [ Argument.required "accessToken" requiredArgs.accessToken Encode.string, Argument.required "goal" requiredArgs.goal Encode.string ] object_ identity

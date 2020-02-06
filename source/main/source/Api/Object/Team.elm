@@ -33,6 +33,13 @@ name =
     Object.selectionForField "String" "name" [] Decode.string
 
 
+{-| チーム目標
+-}
+goal : SelectionSet String Api.Object.Team
+goal =
+    Object.selectionForField "String" "goal" [] Decode.string
+
+
 {-| チームの作成日時
 -}
 createdAt : SelectionSet Api.ScalarCodecs.DateTime Api.Object.Team

@@ -59,3 +59,17 @@ user requiredArgs object_ =
 allTeam : SelectionSet decodesTo Api.Object.Team -> SelectionSet (List decodesTo) RootQuery
 allTeam object_ =
     Object.selectionForCompositeField "allTeam" [] object_ (identity >> Decode.list)
+
+
+type alias TeamRequiredArguments =
+    { id : String }
+
+
+{-| チームのデータ
+
+  - id - チームのID
+
+-}
+team : TeamRequiredArguments -> SelectionSet decodesTo Api.Object.Team -> SelectionSet decodesTo RootQuery
+team requiredArgs object_ =
+    Object.selectionForCompositeField "team" [ Argument.required "id" requiredArgs.id Encode.string ] object_ identity

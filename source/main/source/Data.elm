@@ -314,13 +314,7 @@ teamDataQuery =
             , name = name
             , goal = goal
             , managerId = UserId managerId
-            , playerIdList =
-                -- TODO playerListがnullableになってしまっている?
-                playerIdList
-                    |> List.map
-                        (\playerId ->
-                            playerId |> List.map (Maybe.withDefault "???") |> String.join "," |> UserId
-                        )
+            , playerIdList = playerIdList |> List.map UserId
             , createdAt = timePosixFromGraphQLScalaValue createdAt
             }
         )

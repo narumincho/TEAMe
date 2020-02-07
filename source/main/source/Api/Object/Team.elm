@@ -56,6 +56,6 @@ manager object_ =
 
 {-| 選手
 -}
-playerList : SelectionSet decodesTo Api.Object.UserData -> SelectionSet (List (List (Maybe decodesTo))) Api.Object.Team
+playerList : SelectionSet decodesTo Api.Object.UserData -> SelectionSet (List decodesTo) Api.Object.Team
 playerList object_ =
-    Object.selectionForCompositeField "playerList" [] object_ (identity >> Decode.nullable >> Decode.list >> Decode.list)
+    Object.selectionForCompositeField "playerList" [] object_ (identity >> Decode.list)

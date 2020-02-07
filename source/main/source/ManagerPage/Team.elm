@@ -17,12 +17,12 @@ type Message
 
 init : Data.Manager -> ( Model, SubCommand.SubCommand Message )
 init manager =
-    ( Model { manager = manager }, SubCommand.None )
+    ( Model { manager = manager }, SubCommand.none )
 
 
 update : Message -> Model -> ( Model, SubCommand.SubCommand Message )
 update message model =
-    ( model, SubCommand.None )
+    ( model, SubCommand.none )
 
 
 view : Model -> S.Html Message

@@ -26,7 +26,10 @@ module Data exposing
     , playerGetImageFileHash
     , playerGetName
     , timePosixFromGraphQLScalaValue
+    , updatePersonalGoal
+    , updateTeamGoal
     , urlAsStringFromGraphQLScalaValue
+    , userGetGoal
     , userGetManager
     , userGetPlayer
     , validateTeamName
@@ -130,6 +133,19 @@ userGetPlayer user =
             Nothing
 
 
+userGetGoal : UserData -> Maybe String
+userGetGoal user =
+    case user of
+        NoRole _ ->
+            Nothing
+
+        RoleManager manager ->
+            Just (managerGetGoal manager)
+
+        RolePlayer player ->
+            Just (playerGetGoal player)
+
+
 type Manager
     = Manager
         { id : UserId
@@ -187,6 +203,7 @@ type TeamId
 type alias TeamData =
     { id : TeamId
     , name : String
+    , goal : String
     , managerId : UserId
     , playerIdList : List UserId
     , createdAt : Time.Posix
@@ -250,12 +267,31 @@ joinTeamAndSetPlayerRole accessToken (TeamId teamIdAsString) =
         userDataQuery
 
 
+updatePersonalGoal : AccessToken -> String -> Graphql.SelectionSet.SelectionSet UserData Graphql.Operation.RootMutation
+updatePersonalGoal accessToken goal =
+    Api.Mutation.updatePersonalGoal
+        { accessToken = accessTokenToString accessToken
+        , goal = goal
+        }
+        userDataQuery
+
+
+updateTeamGoal : AccessToken -> String -> Graphql.SelectionSet.SelectionSet TeamData Graphql.Operation.RootMutation
+updateTeamGoal accessToken goal =
+    Api.Mutation.updateTeamGoal
+        { accessToken = accessTokenToString accessToken
+        , goal = goal
+        }
+        teamDataQuery
+
+
 teamDataQuery : Graphql.SelectionSet.SelectionSet TeamData Api.Object.Team
 teamDataQuery =
-    Graphql.SelectionSet.map5
-        (\id name managerId playerIdList createdAt ->
+    Graphql.SelectionSet.map6
+        (\id name goal managerId playerIdList createdAt ->
             { id = TeamId id
             , name = name
+            , goal = goal
             , managerId = UserId managerId
             , playerIdList =
                 -- TODO playerListがnullableになってしまっている?
@@ -269,6 +305,7 @@ teamDataQuery =
         )
         Api.Object.Team.id
         Api.Object.Team.name
+        Api.Object.Team.goal
         (Api.Object.Team.manager Api.Object.UserData.id)
         (Api.Object.Team.playerList Api.Object.UserData.id)
         Api.Object.Team.createdAt

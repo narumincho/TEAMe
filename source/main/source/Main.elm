@@ -425,27 +425,20 @@ responseUserData waitUserData userData =
 
         Data.RoleManager manager ->
             let
-                ( pageModel, command ) =
+                ( pageModel, subCommand ) =
                     pageLocationToInitManagerPageModel manager waitUserData.pageLocation
-                        |> Tuple.mapSecond subCommandToNewDataAndCommand
             in
             ( ManagerLogIn
                 { accessToken = waitUserData.accessToken
                 , manager =
-                    command.newUser
+                    subCommand
+                        |> SubCommand.getUser
                         |> Maybe.andThen Data.userGetManager
                         |> Maybe.withDefault manager
                 , pageModel = pageModel
                 }
-            , [ "監督としてログイン成功!" ]
-                ++ (case command.newNotification of
-                        Just notification ->
-                            [ notification ]
-
-                        Nothing ->
-                            []
-                   )
-            , command.command
+            , [ "監督としてログイン成功!" ] ++ SubCommand.getNotificationList subCommand
+            , subCommandToCommandWithSetTextCommand subCommand
             )
 
         Data.RolePlayer player ->
@@ -520,25 +513,20 @@ updateNoSelectedRole message notSelectedRoleData =
                     case newUserData of
                         Data.RoleManager managerUser ->
                             let
-                                ( pageModel, newDataAndCommand ) =
+                                ( pageModel, subCommand ) =
                                     pageLocationToInitManagerPageModel managerUser PageLocation.Top
-                                        |> Tuple.mapSecond subCommandToNewDataAndCommand
                             in
                             ( ManagerLogIn
                                 { accessToken = record.accessToken
                                 , manager =
-                                    newDataAndCommand.newUser
+                                    subCommand
+                                        |> SubCommand.getUser
                                         |> Maybe.andThen Data.userGetManager
                                         |> Maybe.withDefault managerUser
                                 , pageModel = pageModel
                                 }
-                            , case newDataAndCommand.newNotification of
-                                Just notification ->
-                                    [ notification ]
-
-                                Nothing ->
-                                    []
-                            , newDataAndCommand.command
+                            , SubCommand.getNotificationList subCommand
+                            , subCommandToCommandWithSetTextCommand subCommand
                             )
 
                         _ ->
@@ -621,59 +609,61 @@ updateManager message logInData =
     case ( message, logInData.pageModel ) of
         ( UrlChange url, _ ) ->
             let
-                ( pageModel, newDataAndCommand ) =
+                ( pageModel, subCommand ) =
                     pageLocationToInitManagerPageModel logInData.manager
                         (PageLocation.fromUrl url)
-                        |> Tuple.mapSecond subCommandToNewDataAndCommand
             in
             ( { logInData
                 | pageModel = pageModel
                 , manager =
-                    newDataAndCommand.newUser
+                    subCommand
+                        |> SubCommand.getUser
                         |> Maybe.andThen Data.userGetManager
                         |> Maybe.withDefault logInData.manager
               }
-            , case newDataAndCommand.newNotification of
-                Just notification ->
-                    [ notification ]
-
-                Nothing ->
-                    []
-            , newDataAndCommand.command
+            , SubCommand.getNotificationList subCommand
+            , subCommandToCommandWithSetTextCommand subCommand
             )
 
         ( MessageManagerMyPage pageMessage, PageManagerMyPage pageModel ) ->
             let
-                ( newMyPageModel, newDataAndCommand ) =
-                    ManagerPage.MyPage.update logInData.manager pageMessage pageModel
-                        |> Tuple.mapSecond
-                            (SubCommand.map MessageManagerMyPage
-                                >> subCommandToNewDataAndCommand
-                            )
+                ( newMyPageModel, subCommand ) =
+                    ManagerPage.MyPage.update
+                        logInData.accessToken
+                        logInData.manager
+                        pageMessage
+                        pageModel
+                        |> Tuple.mapSecond (SubCommand.map MessageManagerMyPage)
             in
             ( { logInData
                 | pageModel = PageManagerMyPage newMyPageModel
                 , manager =
-                    newDataAndCommand.newUser
+                    subCommand
+                        |> SubCommand.getUser
                         |> Maybe.andThen Data.userGetManager
                         |> Maybe.withDefault logInData.manager
               }
-            , []
-            , newDataAndCommand.command
+            , SubCommand.getNotificationList subCommand
+            , subCommandToCommandWithSetTextCommand subCommand
             )
 
         ( MessageManagerTeam pageMessage, PageManagerTeam pageModel ) ->
             let
-                ( newPageModel, newDataAndCommand ) =
+                ( newPageModel, subCommand ) =
                     ManagerPage.Team.update pageMessage pageModel
                         |> Tuple.mapSecond
-                            (SubCommand.map MessageManagerTeam
-                                >> subCommandToNewDataAndCommand
-                            )
+                            (SubCommand.map MessageManagerTeam)
             in
-            ( { logInData | pageModel = PageManagerTeam newPageModel }
-            , []
-            , newDataAndCommand.command
+            ( { logInData
+                | pageModel = PageManagerTeam newPageModel
+                , manager =
+                    subCommand
+                        |> SubCommand.getUser
+                        |> Maybe.andThen Data.userGetManager
+                        |> Maybe.withDefault logInData.manager
+              }
+            , SubCommand.getNotificationList subCommand
+            , subCommandToCommandWithSetTextCommand subCommand
             )
 
         ( _, _ ) ->
@@ -731,57 +721,14 @@ updatePlayer message logInData =
             ( logInData, [], Cmd.none )
 
 
-subCommandToNewDataAndCommand :
-    SubCommand.SubCommand Message
-    ->
-        { newNotification : Maybe String
-        , newTeam : Maybe Data.TeamData
-        , newUser : Maybe Data.UserData
-        , command : Cmd Message
-        }
-subCommandToNewDataAndCommand subCommand =
-    case subCommand of
-        SubCommand.AddNotification notification ->
-            { newNotification = Just notification
-            , newTeam = Nothing
-            , newUser = Nothing
-            , command = Cmd.none
-            }
-
-        SubCommand.ChangeInputText idAndText ->
-            { newNotification = Nothing
-            , newTeam = Nothing
-            , newUser = Nothing
-            , command = setText idAndText
-            }
-
-        SubCommand.Command command ->
-            { newNotification = Nothing
-            , newTeam = Nothing
-            , newUser = Nothing
-            , command = command
-            }
-
-        SubCommand.UpdateUser user ->
-            { newNotification = Nothing
-            , newTeam = Nothing
-            , newUser = Just user
-            , command = Cmd.none
-            }
-
-        SubCommand.UpdateTeam teamData ->
-            { newNotification = Nothing
-            , newTeam = Just teamData
-            , newUser = Nothing
-            , command = Cmd.none
-            }
-
-        SubCommand.None ->
-            { newNotification = Nothing
-            , newTeam = Nothing
-            , newUser = Nothing
-            , command = Cmd.none
-            }
+subCommandToCommandWithSetTextCommand : SubCommand.SubCommand Message -> Cmd Message
+subCommandToCommandWithSetTextCommand subCommand =
+    Cmd.batch
+        (SubCommand.getCommand subCommand
+            :: (SubCommand.getChangeInputTextList subCommand
+                    |> List.map setText
+               )
+        )
 
 
 view : Model -> Browser.Document Message

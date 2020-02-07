@@ -1,4 +1,4 @@
-module Style exposing (alignContentEnd, animationFillModeForwards, conditionButton, displayGrid, gridAutoFlowColumn, gridCell, header, inputText, managerBottomNavigation, normalButton, pageContainer, pageMainViewContainer, playerBottomNavigation, themeColor, userImage)
+module Style exposing (alignContentEnd, alignContentStart, animationFillModeForwards, conditionButton, displayGrid, gridAutoFlowColumn, gridCell, header, inputText, managerBottomNavigation, normalButton, pageContainer, pageMainViewContainer, playerBottomNavigation, themeColor, userImage)
 
 import Css
 import Css.Transitions
@@ -62,6 +62,8 @@ pageMainViewContainer =
     S.div
         [ A.css
             [ gridCell { x = 0, y = 1, width = 1, height = 1 }
+            , displayGrid
+            , alignContentStart
             ]
         ]
 
@@ -248,6 +250,11 @@ gridCell { x, y, width, height } =
 alignContentEnd : Css.Style
 alignContentEnd =
     Css.property "align-content" "end"
+
+
+alignContentStart : Css.Style
+alignContentStart =
+    Css.property "align-content" "start"
 
 
 justifyItemsCenter : Css.Style

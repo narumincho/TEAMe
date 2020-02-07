@@ -234,24 +234,24 @@ waitUserModelAndCommand pageLocation accessToken =
     )
 
 
-pageLocationToInitPlayerPageModel : Data.Player -> PageLocation.PageLocation -> ( PlayerPageModel, Cmd Message )
+pageLocationToInitPlayerPageModel : Data.Player -> PageLocation.PageLocation -> ( PlayerPageModel, SubCommand.SubCommand Message )
 pageLocationToInitPlayerPageModel player pageLocation =
     case pageLocation of
         PageLocation.Top ->
             PlayerPage.MyPage.init player
-                |> Tuple.mapBoth PagePlayerMyPage (Cmd.map MessagePlayerMyPage)
+                |> Tuple.mapBoth PagePlayerMyPage (SubCommand.map MessagePlayerMyPage)
 
         PageLocation.PlayerNote ->
             PlayerPage.Note.init player
-                |> Tuple.mapBoth PagePlayerNote (Cmd.map MessagePlayerNote)
+                |> Tuple.mapBoth PagePlayerNote (SubCommand.map MessagePlayerNote)
 
         PageLocation.Team ->
             PlayerPage.Team.init player
-                |> Tuple.mapBoth PagePlayerTeam (Cmd.map MessagePlayerTeam)
+                |> Tuple.mapBoth PagePlayerTeam (SubCommand.map MessagePlayerTeam)
 
         _ ->
             PlayerPage.MyPage.init player
-                |> Tuple.mapBoth PagePlayerMyPage (Cmd.map MessagePlayerMyPage)
+                |> Tuple.mapBoth PagePlayerMyPage (SubCommand.map MessagePlayerMyPage)
 
 
 pageLocationToInitManagerPageModel :
@@ -443,16 +443,20 @@ responseUserData waitUserData userData =
 
         Data.RolePlayer player ->
             let
-                ( pageModel, command ) =
+                ( pageModel, subCommand ) =
                     pageLocationToInitPlayerPageModel player waitUserData.pageLocation
             in
             ( PlayerLogIn
                 { accessToken = waitUserData.accessToken
-                , player = player
+                , player =
+                    subCommand
+                        |> SubCommand.getUser
+                        |> Maybe.andThen Data.userGetPlayer
+                        |> Maybe.withDefault player
                 , pageModel = pageModel
                 }
-            , [ "選手としてログイン成功!" ]
-            , command
+            , [ "選手としてログイン成功!" ] ++ SubCommand.getNotificationList subCommand
+            , subCommandToCommandWithSetTextCommand subCommand
             )
 
 
@@ -570,16 +574,20 @@ updateNoSelectedRole message notSelectedRoleData =
                     case newUserData of
                         Data.RolePlayer player ->
                             let
-                                ( pageModel, command ) =
+                                ( pageModel, subCommand ) =
                                     pageLocationToInitPlayerPageModel player PageLocation.Top
                             in
                             ( PlayerLogIn
                                 { accessToken = record.accessToken
-                                , player = player
+                                , player =
+                                    subCommand
+                                        |> SubCommand.getUser
+                                        |> Maybe.andThen Data.userGetPlayer
+                                        |> Maybe.withDefault player
                                 , pageModel = pageModel
                                 }
-                            , []
-                            , command
+                            , SubCommand.getNotificationList subCommand
+                            , subCommandToCommandWithSetTextCommand subCommand
                             )
 
                         _ ->
@@ -678,43 +686,78 @@ updatePlayer message logInData =
     case ( message, logInData.pageModel ) of
         ( UrlChange url, _ ) ->
             let
-                ( pageModel, command ) =
+                ( pageModel, subCommand ) =
                     pageLocationToInitPlayerPageModel logInData.player
                         (PageLocation.fromUrl url)
             in
-            ( { logInData | pageModel = pageModel }
-            , []
-            , command
+            ( { logInData
+                | pageModel = pageModel
+                , player =
+                    subCommand
+                        |> SubCommand.getUser
+                        |> Maybe.andThen Data.userGetPlayer
+                        |> Maybe.withDefault logInData.player
+              }
+            , SubCommand.getNotificationList subCommand
+            , subCommandToCommandWithSetTextCommand subCommand
             )
 
         ( MessagePlayerMyPage pageMessage, PagePlayerMyPage pageModel ) ->
             let
-                ( newMyPageModel, command ) =
-                    PlayerPage.MyPage.update pageMessage pageModel
+                ( newMyPageModel, subCommand ) =
+                    PlayerPage.MyPage.update
+                        logInData.accessToken
+                        logInData.player
+                        pageMessage
+                        pageModel
+                        |> Tuple.mapSecond (SubCommand.map MessagePlayerMyPage)
             in
-            ( { logInData | pageModel = PagePlayerMyPage newMyPageModel }
-            , []
-            , command |> Cmd.map MessagePlayerMyPage
+            ( { logInData
+                | pageModel = PagePlayerMyPage newMyPageModel
+                , player =
+                    subCommand
+                        |> SubCommand.getUser
+                        |> Maybe.andThen Data.userGetPlayer
+                        |> Maybe.withDefault logInData.player
+              }
+            , SubCommand.getNotificationList subCommand
+            , subCommandToCommandWithSetTextCommand subCommand
             )
 
         ( MessagePlayerNote pageMessage, PagePlayerNote pageModel ) ->
             let
-                ( newPageModel, command ) =
+                ( newPageModel, subCommand ) =
                     PlayerPage.Note.update pageMessage pageModel
+                        |> Tuple.mapSecond (SubCommand.map MessagePlayerNote)
             in
-            ( { logInData | pageModel = PagePlayerNote newPageModel }
-            , []
-            , command |> Cmd.map MessagePlayerNote
+            ( { logInData
+                | pageModel = PagePlayerNote newPageModel
+                , player =
+                    subCommand
+                        |> SubCommand.getUser
+                        |> Maybe.andThen Data.userGetPlayer
+                        |> Maybe.withDefault logInData.player
+              }
+            , SubCommand.getNotificationList subCommand
+            , subCommandToCommandWithSetTextCommand subCommand
             )
 
         ( MessagePlayerTeam pageMessage, PagePlayerTeam pageModel ) ->
             let
-                ( newPageModel, command ) =
+                ( newPageModel, subCommand ) =
                     PlayerPage.Team.update pageMessage pageModel
+                        |> Tuple.mapSecond (SubCommand.map MessagePlayerTeam)
             in
-            ( { logInData | pageModel = PagePlayerTeam newPageModel }
-            , []
-            , command |> Cmd.map MessagePlayerTeam
+            ( { logInData
+                | pageModel = PagePlayerTeam newPageModel
+                , player =
+                    subCommand
+                        |> SubCommand.getUser
+                        |> Maybe.andThen Data.userGetPlayer
+                        |> Maybe.withDefault logInData.player
+              }
+            , SubCommand.getNotificationList subCommand
+            , subCommandToCommandWithSetTextCommand subCommand
             )
 
         ( _, _ ) ->
@@ -938,7 +981,7 @@ playerLogInView : PlayerLogInData -> Html.Styled.Html Message
 playerLogInView logInData =
     case logInData.pageModel of
         PagePlayerMyPage model ->
-            PlayerPage.MyPage.view model
+            PlayerPage.MyPage.view logInData.player model
                 |> Html.Styled.map MessagePlayerMyPage
 
         PagePlayerNote model ->

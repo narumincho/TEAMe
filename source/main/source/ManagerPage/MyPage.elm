@@ -91,8 +91,11 @@ mainView manager (Model record) =
                 else
                     [ Style.inputText goalInputDomId "goal" InputGoal ]
                         ++ (if record.nextGoal /= Data.managerGetGoal manager then
-                                [ Style.normalButton CancelUpdateGoal "キャンセル"
-                                , Style.normalButton UpdateGoal "変更"
+                                [ S.div
+                                    []
+                                    [ Style.normalButton CancelUpdateGoal "キャンセル"
+                                    , Style.normalButton UpdateGoal "変更"
+                                    ]
                                 ]
 
                             else

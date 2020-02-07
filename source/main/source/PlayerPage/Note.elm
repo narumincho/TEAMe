@@ -4,6 +4,7 @@ import Data
 import Html.Styled as S
 import PageLocation
 import Style
+import SubCommand
 
 
 type Model
@@ -14,14 +15,14 @@ type Message
     = Message
 
 
-update : Message -> Model -> ( Model, Cmd Message )
+update : Message -> Model -> ( Model, SubCommand.SubCommand Message )
 update _ model =
-    ( model, Cmd.none )
+    ( model, SubCommand.none )
 
 
-init : Data.Player -> ( Model, Cmd Message )
+init : Data.Player -> ( Model, SubCommand.SubCommand Message )
 init player =
-    ( Model { player = player }, Cmd.none )
+    ( Model { player = player }, SubCommand.none )
 
 
 view : Model -> S.Html Message

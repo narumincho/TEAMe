@@ -1,4 +1,4 @@
-module Style exposing (alignContentEnd, alignContentStart, animationFillModeForwards, conditionButton, displayGrid, goalTitle, gridAutoFlowColumn, gridCell, header, inputText, managerBottomNavigation, normalButton, pageContainer, pageMainViewContainer, playerBottomNavigation, themeColor, userImage)
+module Style exposing (alignContentEnd, alignContentStart, animationFillModeForwards, conditionButton, displayGrid, gap, goalTitle, gridAutoFlowColumn, gridCell, header, inputText, managerBottomNavigation, normalButton, pageContainer, pageMainViewContainer, playerBottomNavigation, themeColor, userImage)
 
 import Css
 import Css.Transitions
@@ -65,6 +65,7 @@ pageMainViewContainer =
             , displayGrid
             , alignContentStart
             , Css.backgroundColor (Css.rgb 246 252 240)
+            , gap 8
             ]
         ]
 

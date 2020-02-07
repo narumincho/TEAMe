@@ -2,6 +2,7 @@ module PlayerPage.MyPage exposing (Message, Model, init, update, view)
 
 import Data
 import Html.Styled
+import PageLocation
 import Style
 
 
@@ -28,5 +29,5 @@ view (Model record) =
     Style.pageContainer
         [ Style.header (Just (Data.RolePlayer record.player))
         , Style.pageMainViewContainer [ Html.Styled.text "選手のマイページ" ]
-        , Style.playerBottomNavigation
+        , Style.playerBottomNavigation PageLocation.Top
         ]

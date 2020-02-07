@@ -2,6 +2,7 @@ module ManagerPage.Team exposing (Message(..), Model, init, update, view)
 
 import Data
 import Html.Styled as S
+import PageLocation
 import Style
 import SubCommand
 
@@ -29,5 +30,5 @@ view (Model record) =
     Style.pageContainer
         [ Style.header (Just (Data.RoleManager record.manager))
         , Style.pageMainViewContainer [ S.text "導者のチームページ" ]
-        , Style.managerBottomNavigation
+        , Style.managerBottomNavigation PageLocation.Team
         ]

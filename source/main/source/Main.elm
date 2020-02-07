@@ -1012,6 +1012,7 @@ notificationView notificationList =
             , Css.justifyContent Css.end
             , Style.alignContentEnd
             , Css.paddingBottom (Css.rem 5)
+            , Css.property "pointer-events" "none"
             ]
         ]
         (notificationList

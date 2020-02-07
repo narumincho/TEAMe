@@ -2,6 +2,7 @@ module PlayerPage.Note exposing (Message, Model, init, update, view)
 
 import Data
 import Html.Styled as S
+import PageLocation
 import Style
 
 
@@ -28,5 +29,5 @@ view (Model record) =
     Style.pageContainer
         [ Style.header (Just (Data.RolePlayer record.player))
         , Style.pageMainViewContainer [ S.text "PDCAを見るためのノート" ]
-        , Style.playerBottomNavigation
+        , Style.playerBottomNavigation PageLocation.PlayerNote
         ]

@@ -66,24 +66,24 @@ pageMainViewContainer =
         ]
 
 
-playerBottomNavigation : S.Html message
-playerBottomNavigation =
+playerBottomNavigation : PageLocation.PageLocation -> S.Html message
+playerBottomNavigation selected =
     S.div
-        [ A.css [ bottomNavigationStyle ]
+        [ A.css [ bottomNavigationStyle, gridCellWidthList [ "1fr", "1fr", "1fr" ] ]
         ]
-        [ navigationItem PageLocation.Top "マイページ"
-        , navigationItem PageLocation.PlayerNote "ノート"
-        , navigationItem PageLocation.Team "チーム"
+        [ navigationItem selected PageLocation.Top "マイページ"
+        , navigationItem selected PageLocation.PlayerNote "ノート"
+        , navigationItem selected PageLocation.Team "チーム"
         ]
 
 
-managerBottomNavigation : S.Html message
-managerBottomNavigation =
+managerBottomNavigation : PageLocation.PageLocation -> S.Html message
+managerBottomNavigation selected =
     S.div
-        [ A.css [ bottomNavigationStyle ]
+        [ A.css [ bottomNavigationStyle, gridCellWidthList [ "1fr", "1fr" ] ]
         ]
-        [ navigationItem PageLocation.Top "マイページ"
-        , navigationItem PageLocation.Team "チーム"
+        [ navigationItem selected PageLocation.Top "マイページ"
+        , navigationItem selected PageLocation.Team "チーム"
         ]
 
 
@@ -97,20 +97,34 @@ bottomNavigationStyle =
         ]
 
 
-navigationItem : PageLocation.PageLocation -> String -> S.Html message
-navigationItem pageLocation text =
-    S.a
-        [ A.href (PageLocation.toUrlAsString pageLocation)
-        , A.css
-            [ displayGrid
-            , Css.textDecoration Css.none
-            , Css.color (Css.rgb 0 0 0)
-            , Css.backgroundColor themeColor
-            , Css.justifyContent Css.center
-            , Css.alignItems Css.center
+navigationItem : PageLocation.PageLocation -> PageLocation.PageLocation -> String -> S.Html message
+navigationItem selected pageLocation text =
+    if selected == pageLocation then
+        S.div
+            [ A.css
+                [ displayGrid
+                , Css.textDecoration Css.none
+                , Css.color (Css.rgb 255 255 255)
+                , Css.backgroundColor themeColor
+                , justifyItemsCenter
+                , Css.alignItems Css.center
+                ]
             ]
-        ]
-        [ S.text text ]
+            [ S.text text ]
+
+    else
+        S.a
+            [ A.href (PageLocation.toUrlAsString pageLocation)
+            , A.css
+                [ displayGrid
+                , Css.textDecoration Css.none
+                , Css.color (Css.rgb 0 0 0)
+                , Css.backgroundColor themeColor
+                , justifyItemsCenter
+                , Css.alignItems Css.center
+                ]
+            ]
+            [ S.text text ]
 
 
 normalButton : message -> String -> S.Html message
@@ -234,6 +248,11 @@ gridCell { x, y, width, height } =
 alignContentEnd : Css.Style
 alignContentEnd =
     Css.property "align-content" "end"
+
+
+justifyItemsCenter : Css.Style
+justifyItemsCenter =
+    Css.property "justify-items" "center"
 
 
 userSelectNone : Css.Style

@@ -2,6 +2,7 @@ module ManagerPage.MyPage exposing (Message(..), Model, init, update, view)
 
 import Data
 import Html.Styled as S
+import PageLocation
 import Style
 import SubCommand
 
@@ -53,7 +54,7 @@ view manager model =
     Style.pageContainer
         [ Style.header (Just (Data.RoleManager manager))
         , mainView manager model
-        , Style.managerBottomNavigation
+        , Style.managerBottomNavigation PageLocation.Top
         ]
 
 

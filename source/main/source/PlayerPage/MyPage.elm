@@ -77,7 +77,7 @@ view player model =
     Style.pageContainer
         [ Style.header (Just (Data.RolePlayer player))
         , mainView player model
-        , Style.managerBottomNavigation PageLocation.Top
+        , Style.playerBottomNavigation PageLocation.Top
         ]
 
 

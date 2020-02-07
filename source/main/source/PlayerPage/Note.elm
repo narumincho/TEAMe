@@ -49,8 +49,9 @@ mainView model =
             [ S.table
                 [ Html.Styled.Attributes.css
                     [ Css.borderCollapse Css.collapse
-                    , Css.border3 (Css.px 2) Css.solid (Css.rgb 0 0 0)
+                    , Css.border3 (Css.rem 0.2) Css.solid cycleBorderColor
                     , Css.borderRadius (Css.rem 0.5)
+                    , Css.backgroundColor (Css.rgb 255 255 255)
                     ]
                 ]
                 [ pdcaTr "P" "仮説" []
@@ -68,7 +69,7 @@ pdcaTr : String -> String -> List (S.Html Message) -> S.Html Message
 pdcaTr alpha subText body =
     S.tr
         [ Html.Styled.Attributes.css
-            [ Css.border3 (Css.px 1) Css.solid (Css.rgb 0 0 0)
+            [ Css.border3 (Css.rem 0.2) Css.solid cycleBorderColor
             , Css.height (Css.rem 6)
             ]
         ]
@@ -76,6 +77,7 @@ pdcaTr alpha subText body =
             [ Html.Styled.Attributes.css
                 [ Css.width (Css.rem 6)
                 , Css.padding (Css.rem 0.5)
+                , Css.color cycleBorderColor
                 ]
             ]
             [ S.div
@@ -87,3 +89,8 @@ pdcaTr alpha subText body =
             ]
         , S.td [] body
         ]
+
+
+cycleBorderColor : Css.Color
+cycleBorderColor =
+    Css.rgb 168 165 188

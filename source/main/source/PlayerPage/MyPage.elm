@@ -84,7 +84,7 @@ view player model =
 mainView : Data.Player -> Model -> S.Html Message
 mainView player (Model record) =
     Style.pageMainViewContainer
-        ([ S.div [] [ S.text "個人目標" ]
+        ([ Style.goalTitle "個人目標"
          ]
             ++ (if record.updatingGoal then
                     [ S.div [] [ S.text "個人目標を変更中……" ] ]

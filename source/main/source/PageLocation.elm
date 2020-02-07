@@ -17,7 +17,7 @@ type PageLocation
     | PlayerNote
     | PlayerPdcaForm
     | Team
-    | ManagerPdcaEditor
+    | ManagerFormEditor
 
 
 initFromUrl : Url.Url -> ( Maybe Data.AccessToken, PageLocation )
@@ -51,7 +51,7 @@ fromUrl url =
     , playerNoteParser |> parserMap (always PlayerNote)
     , playerPdcaFormParser |> parserMap (always PlayerPdcaForm)
     , playerTeamParser |> parserMap (always Team)
-    , managerPdcaEditorParser |> parserMap (always ManagerPdcaEditor)
+    , managerPdcaEditorParser |> parserMap (always ManagerFormEditor)
     ]
         |> List.map (\f -> f path)
         |> oneOf
@@ -93,7 +93,7 @@ toUrlAsString location =
         Team ->
             ( playerTeamPath, [] )
 
-        ManagerPdcaEditor ->
+        ManagerFormEditor ->
             ( managerPdcaEditorPath, [] )
     )
         |> (\( path, query ) -> Url.Builder.absolute path query)
@@ -166,4 +166,4 @@ managerPdcaEditorParser path =
 
 managerPdcaEditorPath : List String
 managerPdcaEditorPath =
-    [ "pdca-editor" ]
+    [ "form-editor" ]

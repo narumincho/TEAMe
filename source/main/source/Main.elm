@@ -846,44 +846,39 @@ view (Model record) =
 
 logInView : LogInViewModel -> Html.Styled.Html Message
 logInView model =
-    Html.Styled.div
-        []
-        ([ Html.Styled.div
-            []
-            [ Html.Styled.text "ログイン画面" ]
-         ]
-            ++ (case model of
-                    DisplayedLogInButton ->
-                        [ Html.Styled.div
-                            []
-                            [ Html.Styled.text "TEAMeを使うにはログインが必要です" ]
-                        , lineLogInButton
-                        , Style.normalButton
-                            (LogInSampleUser (Data.accessTokenFromString "862631c80456b3045b67e3c5031ca1e7f50140c9b26e662c"))
-                            "Aさん でログイン"
-                        , Style.normalButton
-                            (LogInSampleUser (Data.accessTokenFromString "53b657df6b6d178a1c77d964c3c6d91e68c6bce10f38ead0"))
-                            "Bさん でログイン"
-                        , Style.normalButton
-                            (LogInSampleUser (Data.accessTokenFromString "754f8dc48151667dd5cb80ec092aade54fc32deb93ddad70"))
-                            "Cさん でログイン"
-                        , Style.normalButton
-                            (LogInSampleUser (Data.accessTokenFromString "a893a1988368e272453be3640d8b868aa5095ca4f2d7de789"))
-                            "Dさん でログイン"
-                        ]
+    Style.pageContainer
+        (case model of
+            DisplayedLogInButton ->
+                [ Style.header Nothing
+                , Html.Styled.div
+                    []
+                    [ Html.Styled.text "TEAMeを使うにはログインが必要です" ]
+                , lineLogInButton
+                , Style.normalButton
+                    (LogInSampleUser (Data.accessTokenFromString "862631c80456b3045b67e3c5031ca1e7f50140c9b26e662c"))
+                    "Aさん でログイン"
+                , Style.normalButton
+                    (LogInSampleUser (Data.accessTokenFromString "53b657df6b6d178a1c77d964c3c6d91e68c6bce10f38ead0"))
+                    "Bさん でログイン"
+                , Style.normalButton
+                    (LogInSampleUser (Data.accessTokenFromString "754f8dc48151667dd5cb80ec092aade54fc32deb93ddad70"))
+                    "Cさん でログイン"
+                , Style.normalButton
+                    (LogInSampleUser (Data.accessTokenFromString "a893a1988368e272453be3640d8b868aa5095ca4f2d7de789"))
+                    "Dさん でログイン"
+                ]
 
-                    WaitLogInUrl ->
-                        [ Html.Styled.div
-                            []
-                            [ Html.Styled.text "ログインへのURLを取得中" ]
-                        ]
+            WaitLogInUrl ->
+                [ Html.Styled.div
+                    []
+                    [ Html.Styled.text "ログインへのURLを取得中" ]
+                ]
 
-                    ErrorLogIn errorMessage ->
-                        [ Html.Styled.div
-                            []
-                            [ Html.Styled.text ("ログインに失敗しました。" ++ errorMessage) ]
-                        ]
-               )
+            ErrorLogIn errorMessage ->
+                [ Html.Styled.div
+                    []
+                    [ Html.Styled.text ("ログインに失敗しました。" ++ errorMessage) ]
+                ]
         )
 
 

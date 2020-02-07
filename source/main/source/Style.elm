@@ -1,4 +1,4 @@
-module Style exposing (alignContentEnd, alignContentStart, animationFillModeForwards, conditionButton, displayGrid, gridAutoFlowColumn, gridCell, header, inputText, managerBottomNavigation, normalButton, pageContainer, pageMainViewContainer, playerBottomNavigation, themeColor, userImage)
+module Style exposing (alignContentEnd, alignContentStart, animationFillModeForwards, conditionButton, displayGrid, goalTitle, gridAutoFlowColumn, gridCell, header, inputText, managerBottomNavigation, normalButton, pageContainer, pageMainViewContainer, playerBottomNavigation, themeColor, userImage)
 
 import Css
 import Css.Transitions
@@ -35,7 +35,7 @@ header userMaybe =
             , Css.backgroundColor themeColor
             , gridCell { x = 0, y = 0, width = 1, height = 1 }
             , gridCellWidthList [ "1fr", "max-content" ]
-            , Css.padding (Css.rem 0.2)
+            , Css.padding (Css.rem 0.4)
             ]
         ]
         ([ S.div
@@ -64,6 +64,7 @@ pageMainViewContainer =
             [ gridCell { x = 0, y = 1, width = 1, height = 1 }
             , displayGrid
             , alignContentStart
+            , Css.backgroundColor (Css.rgb 246 252 240)
             ]
         ]
 
@@ -110,6 +111,7 @@ navigationItem selected pageLocation text =
                 , Css.backgroundColor themeColor
                 , justifyItemsCenter
                 , Css.alignItems Css.center
+                , userSelectNone
                 ]
             ]
             [ S.text text ]
@@ -124,6 +126,7 @@ navigationItem selected pageLocation text =
                 , Css.backgroundColor themeColor
                 , justifyItemsCenter
                 , Css.alignItems Css.center
+                , userSelectNone
                 ]
             ]
             [ S.text text ]
@@ -189,19 +192,13 @@ inputText id name messageFunction =
         , E.onInput messageFunction
         , A.css
             [ Css.borderRadius (Css.rem 0.5)
-            , Css.border3 (Css.px 1) Css.solid (Css.rgb 204 204 204)
+            , Css.border3 (Css.px 4) Css.solid themeColor
             , Css.fontSize (Css.rem 1.5)
             , Css.padding (Css.rem 0.5)
-            , Css.boxShadow5
-                Css.inset
-                Css.zero
-                (Css.px 1)
-                (Css.px 1)
-                (Css.rgba 0 0 0 0.75)
             , Css.outline Css.none
             , Css.focus
-                [ Css.property "box-shadow" "inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(102, 175, 233, 0.6)"
-                , Css.border3 (Css.px 1) Css.solid (Css.rgb 102 175 233)
+                [ Css.property "box-shadow" "inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(167, 216, 110, 0.6)"
+                , Css.border3 (Css.px 1) Css.solid themeColor
                 ]
             , Css.Transitions.transition
                 [ Css.Transitions.borderColor3 150 0 Css.Transitions.easeInOut
@@ -210,6 +207,21 @@ inputText id name messageFunction =
             ]
         ]
         []
+
+
+goalTitle : String -> S.Html message
+goalTitle text =
+    S.div
+        [ A.css
+            [ Css.color themeColor
+            , displayGrid
+            , Css.alignItems Css.center
+            , Css.justifyContent Css.center
+            , Css.fontSize (Css.rem 1.2)
+            , Css.padding (Css.rem 0.5)
+            ]
+        ]
+        [ S.text text ]
 
 
 displayGrid : Css.Style

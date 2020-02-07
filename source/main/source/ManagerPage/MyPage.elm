@@ -83,7 +83,7 @@ view manager model =
 mainView : Data.Manager -> Model -> S.Html Message
 mainView manager (Model record) =
     Style.pageMainViewContainer
-        ([ S.div [] [ S.text "指導目標" ]
+        ([ Style.goalTitle "指導目標"
          ]
             ++ (if record.updatingGoal then
                     [ S.div [] [ S.text "指導目標を変更中……" ] ]

@@ -1,6 +1,7 @@
-module ManagerPage.Team exposing (Message(..), Model, init, update, view)
+module ManagerPage.Team exposing (Message, Model, init, update, view)
 
 import Data
+import Graphql.Http
 import Html.Styled as S
 import PageLocation
 import Style
@@ -8,27 +9,98 @@ import SubCommand
 
 
 type Model
-    = Model { manager : Data.Manager }
+    = Model { updatingGoal : Bool, nextGoal : String }
 
 
 type Message
-    = Message
+    = InputGoal String
+    | CancelUpdateGoal
+    | UpdateGoal
+    | UpdateGoalResponse (Result (Graphql.Http.Error Data.TeamData) Data.TeamData)
 
 
-init : Data.Manager -> ( Model, SubCommand.SubCommand Message )
-init manager =
-    ( Model { manager = manager }, SubCommand.none )
+init : Data.TeamData -> ( Model, SubCommand.SubCommand Message )
+init teamData =
+    ( Model { updatingGoal = False, nextGoal = teamData.goal }
+    , SubCommand.setInputText { id = goalInputDomId, text = teamData.goal }
+    )
 
 
-update : Message -> Model -> ( Model, SubCommand.SubCommand Message )
-update message model =
-    ( model, SubCommand.none )
+update : Data.AccessToken -> Data.TeamData -> Message -> Model -> ( Model, SubCommand.SubCommand Message )
+update accessToken teamData message (Model record) =
+    case message of
+        InputGoal goal ->
+            ( Model { record | nextGoal = goal }
+            , SubCommand.none
+            )
+
+        CancelUpdateGoal ->
+            ( Model { record | nextGoal = teamData.goal }
+            , SubCommand.none
+            )
+
+        UpdateGoal ->
+            ( Model { record | updatingGoal = True }
+            , SubCommand.addCommand
+                (Graphql.Http.mutationRequest Data.apiUrl
+                    (Data.updateTeamGoal accessToken record.nextGoal)
+                    |> Graphql.Http.send UpdateGoalResponse
+                )
+            )
+
+        UpdateGoalResponse response ->
+            case response of
+                Ok newTeam ->
+                    ( Model { record | updatingGoal = False }
+                    , SubCommand.batch
+                        [ SubCommand.updateTeam newTeam
+                        , SubCommand.setInputText
+                            { id = goalInputDomId
+                            , text = newTeam.goal
+                            }
+                        ]
+                    )
+
+                Err _ ->
+                    ( Model { record | updatingGoal = False }
+                    , SubCommand.addNotification "指導目標の変更に失敗しました"
+                    )
 
 
-view : Model -> S.Html Message
-view (Model record) =
+view : Data.Manager -> Data.TeamData -> Model -> S.Html Message
+view manager teamData (Model record) =
     Style.pageContainer
-        [ Style.header (Just (Data.RoleManager record.manager))
-        , Style.pageMainViewContainer [ S.text "指導者のチームページ" ]
+        [ Style.header (Just (Data.RoleManager manager))
+        , mainView teamData (Model record)
         , Style.managerBottomNavigation PageLocation.Team
         ]
+
+
+mainView : Data.TeamData -> Model -> S.Html Message
+mainView teamData (Model record) =
+    Style.pageMainViewContainer
+        ([ Style.goalTitle "チーム目標"
+         ]
+            ++ (if record.updatingGoal then
+                    [ S.div [] [ S.text "チーム目標を変更中……" ] ]
+
+                else
+                    [ Style.inputText goalInputDomId "goal" InputGoal ]
+                        ++ (if record.nextGoal /= teamData.goal then
+                                [ S.div
+                                    []
+                                    [ Style.normalButton CancelUpdateGoal "キャンセル"
+                                    , Style.normalButton UpdateGoal "変更"
+                                    ]
+                                ]
+
+                            else
+                                []
+                           )
+               )
+        )
+
+
+goalInputDomId : String
+goalInputDomId =
+    "team-goal"

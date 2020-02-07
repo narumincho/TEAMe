@@ -247,8 +247,8 @@ waitUserModelAndCommand pageLocation accessToken =
     )
 
 
-pageLocationToInitPlayerPageModel : Data.Player -> PageLocation.PageLocation -> ( PlayerPageModel, SubCommand.SubCommand Message )
-pageLocationToInitPlayerPageModel player pageLocation =
+pageLocationToInitPlayerPageModel : Data.TeamData -> Data.Player -> PageLocation.PageLocation -> ( PlayerPageModel, SubCommand.SubCommand Message )
+pageLocationToInitPlayerPageModel teamData player pageLocation =
     case pageLocation of
         PageLocation.Top ->
             PlayerPage.MyPage.init player
@@ -259,7 +259,7 @@ pageLocationToInitPlayerPageModel player pageLocation =
                 |> Tuple.mapBoth PagePlayerNote (SubCommand.map MessagePlayerNote)
 
         PageLocation.Team ->
-            PlayerPage.Team.init player
+            PlayerPage.Team.init teamData
                 |> Tuple.mapBoth PagePlayerTeam (SubCommand.map MessagePlayerTeam)
 
         _ ->
@@ -268,17 +268,18 @@ pageLocationToInitPlayerPageModel player pageLocation =
 
 
 pageLocationToInitManagerPageModel :
-    Data.Manager
+    Data.TeamData
+    -> Data.Manager
     -> PageLocation.PageLocation
     -> ( ManagerPageModel, SubCommand.SubCommand Message )
-pageLocationToInitManagerPageModel manager pageLocation =
+pageLocationToInitManagerPageModel teamData manager pageLocation =
     case pageLocation of
         PageLocation.Top ->
             ManagerPage.MyPage.init manager
                 |> Tuple.mapBoth PageManagerMyPage (SubCommand.map MessageManagerMyPage)
 
         PageLocation.Team ->
-            ManagerPage.Team.init manager
+            ManagerPage.Team.init teamData
                 |> Tuple.mapBoth PageManagerTeam (SubCommand.map MessageManagerTeam)
 
         _ ->
@@ -340,7 +341,7 @@ update message (Model rec) =
                         TeamResponse (Ok teamData) ->
                             let
                                 ( pageModel, subCommand ) =
-                                    pageLocationToInitManagerPageModel waitTeamData.manager waitTeamData.pageLocation
+                                    pageLocationToInitManagerPageModel teamData waitTeamData.manager waitTeamData.pageLocation
                             in
                             ( Model
                                 { rec
@@ -379,7 +380,7 @@ update message (Model rec) =
                         TeamResponse (Ok teamData) ->
                             let
                                 ( pageModel, subCommand ) =
-                                    pageLocationToInitPlayerPageModel waitTeamData.player waitTeamData.pageLocation
+                                    pageLocationToInitPlayerPageModel teamData waitTeamData.player waitTeamData.pageLocation
                             in
                             ( Model
                                 { rec
@@ -655,63 +656,26 @@ updateManager :
 updateManager message logInData =
     case ( message, logInData.pageModel ) of
         ( UrlChange url, _ ) ->
-            let
-                ( pageModel, subCommand ) =
-                    pageLocationToInitManagerPageModel logInData.manager
-                        (PageLocation.fromUrl url)
-            in
-            ( { logInData
-                | pageModel = pageModel
-                , manager =
-                    subCommand
-                        |> SubCommand.getUser
-                        |> Maybe.andThen Data.userGetManager
-                        |> Maybe.withDefault logInData.manager
-              }
-            , SubCommand.getNotificationList subCommand
-            , subCommandToCommandWithSetTextCommand subCommand
-            )
+            pageLocationToInitManagerPageModel logInData.team
+                logInData.manager
+                (PageLocation.fromUrl url)
+                |> managerUpdateLogInDataAndCommandFromSubCommand logInData
 
         ( MessageManagerMyPage pageMessage, PageManagerMyPage pageModel ) ->
-            let
-                ( newMyPageModel, subCommand ) =
-                    ManagerPage.MyPage.update
-                        logInData.accessToken
-                        logInData.manager
-                        pageMessage
-                        pageModel
-                        |> Tuple.mapSecond (SubCommand.map MessageManagerMyPage)
-            in
-            ( { logInData
-                | pageModel = PageManagerMyPage newMyPageModel
-                , manager =
-                    subCommand
-                        |> SubCommand.getUser
-                        |> Maybe.andThen Data.userGetManager
-                        |> Maybe.withDefault logInData.manager
-              }
-            , SubCommand.getNotificationList subCommand
-            , subCommandToCommandWithSetTextCommand subCommand
-            )
+            ManagerPage.MyPage.update
+                logInData.accessToken
+                logInData.manager
+                pageMessage
+                pageModel
+                |> Tuple.mapBoth PageManagerMyPage (SubCommand.map MessageManagerMyPage)
+                |> managerUpdateLogInDataAndCommandFromSubCommand logInData
 
         ( MessageManagerTeam pageMessage, PageManagerTeam pageModel ) ->
-            let
-                ( newPageModel, subCommand ) =
-                    ManagerPage.Team.update pageMessage pageModel
-                        |> Tuple.mapSecond
-                            (SubCommand.map MessageManagerTeam)
-            in
-            ( { logInData
-                | pageModel = PageManagerTeam newPageModel
-                , manager =
-                    subCommand
-                        |> SubCommand.getUser
-                        |> Maybe.andThen Data.userGetManager
-                        |> Maybe.withDefault logInData.manager
-              }
-            , SubCommand.getNotificationList subCommand
-            , subCommandToCommandWithSetTextCommand subCommand
-            )
+            ManagerPage.Team.update logInData.accessToken logInData.team pageMessage pageModel
+                |> Tuple.mapBoth
+                    PageManagerTeam
+                    (SubCommand.map MessageManagerTeam)
+                |> managerUpdateLogInDataAndCommandFromSubCommand logInData
 
         ( _, _ ) ->
             ( logInData
@@ -720,87 +684,74 @@ updateManager message logInData =
             )
 
 
+managerUpdateLogInDataAndCommandFromSubCommand : ManagerLogInData -> ( ManagerPageModel, SubCommand.SubCommand Message ) -> ( ManagerLogInData, List String, Cmd Message )
+managerUpdateLogInDataAndCommandFromSubCommand logInData ( newPageModel, subCommand ) =
+    ( { logInData
+        | pageModel = newPageModel
+        , manager =
+            subCommand
+                |> SubCommand.getUser
+                |> Maybe.andThen Data.userGetManager
+                |> Maybe.withDefault logInData.manager
+        , team =
+            subCommand
+                |> SubCommand.getTeam
+                |> Maybe.withDefault logInData.team
+      }
+    , SubCommand.getNotificationList subCommand
+    , subCommandToCommandWithSetTextCommand subCommand
+    )
+
+
 updatePlayer : Message -> PlayerLogInData -> ( PlayerLogInData, List String, Cmd Message )
 updatePlayer message logInData =
     case ( message, logInData.pageModel ) of
         ( UrlChange url, _ ) ->
-            let
-                ( pageModel, subCommand ) =
-                    pageLocationToInitPlayerPageModel logInData.player
-                        (PageLocation.fromUrl url)
-            in
-            ( { logInData
-                | pageModel = pageModel
-                , player =
-                    subCommand
-                        |> SubCommand.getUser
-                        |> Maybe.andThen Data.userGetPlayer
-                        |> Maybe.withDefault logInData.player
-              }
-            , SubCommand.getNotificationList subCommand
-            , subCommandToCommandWithSetTextCommand subCommand
-            )
+            pageLocationToInitPlayerPageModel logInData.team
+                logInData.player
+                (PageLocation.fromUrl url)
+                |> playerUpdateLogInDataAndCommandFromSubCommand logInData
 
         ( MessagePlayerMyPage pageMessage, PagePlayerMyPage pageModel ) ->
-            let
-                ( newMyPageModel, subCommand ) =
-                    PlayerPage.MyPage.update
-                        logInData.accessToken
-                        logInData.player
-                        pageMessage
-                        pageModel
-                        |> Tuple.mapSecond (SubCommand.map MessagePlayerMyPage)
-            in
-            ( { logInData
-                | pageModel = PagePlayerMyPage newMyPageModel
-                , player =
-                    subCommand
-                        |> SubCommand.getUser
-                        |> Maybe.andThen Data.userGetPlayer
-                        |> Maybe.withDefault logInData.player
-              }
-            , SubCommand.getNotificationList subCommand
-            , subCommandToCommandWithSetTextCommand subCommand
-            )
+            PlayerPage.MyPage.update
+                logInData.accessToken
+                logInData.player
+                pageMessage
+                pageModel
+                |> Tuple.mapBoth PagePlayerMyPage (SubCommand.map MessagePlayerMyPage)
+                |> playerUpdateLogInDataAndCommandFromSubCommand logInData
 
         ( MessagePlayerNote pageMessage, PagePlayerNote pageModel ) ->
-            let
-                ( newPageModel, subCommand ) =
-                    PlayerPage.Note.update pageMessage pageModel
-                        |> Tuple.mapSecond (SubCommand.map MessagePlayerNote)
-            in
-            ( { logInData
-                | pageModel = PagePlayerNote newPageModel
-                , player =
-                    subCommand
-                        |> SubCommand.getUser
-                        |> Maybe.andThen Data.userGetPlayer
-                        |> Maybe.withDefault logInData.player
-              }
-            , SubCommand.getNotificationList subCommand
-            , subCommandToCommandWithSetTextCommand subCommand
-            )
+            PlayerPage.Note.update pageMessage pageModel
+                |> Tuple.mapBoth PagePlayerNote (SubCommand.map MessagePlayerNote)
+                |> playerUpdateLogInDataAndCommandFromSubCommand logInData
 
         ( MessagePlayerTeam pageMessage, PagePlayerTeam pageModel ) ->
-            let
-                ( newPageModel, subCommand ) =
-                    PlayerPage.Team.update pageMessage pageModel
-                        |> Tuple.mapSecond (SubCommand.map MessagePlayerTeam)
-            in
-            ( { logInData
-                | pageModel = PagePlayerTeam newPageModel
-                , player =
-                    subCommand
-                        |> SubCommand.getUser
-                        |> Maybe.andThen Data.userGetPlayer
-                        |> Maybe.withDefault logInData.player
-              }
-            , SubCommand.getNotificationList subCommand
-            , subCommandToCommandWithSetTextCommand subCommand
-            )
+            PlayerPage.Team.update logInData.accessToken logInData.team pageMessage pageModel
+                |> Tuple.mapBoth PagePlayerTeam (SubCommand.map MessagePlayerTeam)
+                |> playerUpdateLogInDataAndCommandFromSubCommand logInData
 
         ( _, _ ) ->
             ( logInData, [], Cmd.none )
+
+
+playerUpdateLogInDataAndCommandFromSubCommand : PlayerLogInData -> ( PlayerPageModel, SubCommand.SubCommand Message ) -> ( PlayerLogInData, List String, Cmd Message )
+playerUpdateLogInDataAndCommandFromSubCommand logInData ( newPageModel, subCommand ) =
+    ( { logInData
+        | pageModel = newPageModel
+        , player =
+            subCommand
+                |> SubCommand.getUser
+                |> Maybe.andThen Data.userGetPlayer
+                |> Maybe.withDefault logInData.player
+        , team =
+            subCommand
+                |> SubCommand.getTeam
+                |> Maybe.withDefault logInData.team
+      }
+    , SubCommand.getNotificationList subCommand
+    , subCommandToCommandWithSetTextCommand subCommand
+    )
 
 
 subCommandToCommandWithSetTextCommand : SubCommand.SubCommand Message -> Cmd Message
@@ -1013,7 +964,7 @@ managerLogInView logInData =
                 |> Html.Styled.map MessageManagerMyPage
 
         PageManagerTeam model ->
-            ManagerPage.Team.view model
+            ManagerPage.Team.view logInData.manager logInData.team model
                 |> Html.Styled.map MessageManagerTeam
 
 
@@ -1029,7 +980,7 @@ playerLogInView logInData =
                 |> Html.Styled.map MessagePlayerNote
 
         PagePlayerTeam model ->
-            PlayerPage.Team.view model
+            PlayerPage.Team.view logInData.player logInData.team model
                 |> Html.Styled.map MessagePlayerTeam
 
 

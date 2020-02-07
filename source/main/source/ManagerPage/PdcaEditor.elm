@@ -1,4 +1,4 @@
-module ManagerPage.PdcaEditor exposing (Message(..), Model, init, update, view)
+module ManagerPage.PdcaEditor exposing (Message, Model, init, update, view)
 
 import Html.Styled as S
 

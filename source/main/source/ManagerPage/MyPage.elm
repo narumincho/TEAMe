@@ -1,4 +1,4 @@
-module ManagerPage.MyPage exposing (Message(..), Model, init, update, view)
+module ManagerPage.MyPage exposing (Message, Model, init, update, view)
 
 import Data
 import Graphql.Http

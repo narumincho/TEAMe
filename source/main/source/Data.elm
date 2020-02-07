@@ -12,6 +12,7 @@ module Data exposing
     , accessTokenToString
     , apiUrl
     , cloudFunctionsOrigin
+    , createCycle
     , createTeamAndSetManagerRole
     , fileHashFromGraphQLScalaValue
     , fileHashToUrlAsString
@@ -189,7 +190,7 @@ type Player
         , goal : String
         , teamId : TeamId
         , createdAt : Time.Posix
-        , cycleList : List Cycle
+        , cycleList : List CycleData
         }
 
 
@@ -197,7 +198,7 @@ type CycleId
     = CycleId String
 
 
-type alias Cycle =
+type alias CycleData =
     { id : CycleId
     , plan : String
     , do : String
@@ -321,6 +322,18 @@ updateTeamGoal accessToken goal =
         teamDataQuery
 
 
+createCycle : AccessToken -> { plan : String, do : String, check : String, act : String } -> Graphql.SelectionSet.SelectionSet CycleData Graphql.Operation.RootMutation
+createCycle accessToken cycleData =
+    Api.Mutation.createCycle
+        { accessToken = accessTokenToString accessToken
+        , plan = cycleData.plan
+        , do = cycleData.do
+        , check = cycleData.check
+        , act = cycleData.act
+        }
+        cycleQuery
+
+
 teamDataQuery : Graphql.SelectionSet.SelectionSet TeamData Api.Object.Team
 teamDataQuery =
     Graphql.SelectionSet.map6
@@ -388,20 +401,22 @@ userDataQuery =
         )
         Api.Object.UserData.createdAt
         Api.Object.UserData.role
-        (Api.Object.UserData.cycleList
-            (Graphql.SelectionSet.map5
-                (\id plan do check act ->
-                    { id = CycleId id
-                    , plan = plan
-                    , do = do
-                    , check = check
-                    , act = act
-                    }
-                )
-                Api.Object.Cycle.id
-                Api.Object.Cycle.plan
-                Api.Object.Cycle.do
-                Api.Object.Cycle.check
-                Api.Object.Cycle.act
-            )
+        (Api.Object.UserData.cycleList cycleQuery)
+
+
+cycleQuery : Graphql.SelectionSet.SelectionSet CycleData Api.Object.Cycle
+cycleQuery =
+    Graphql.SelectionSet.map5
+        (\id plan do check act ->
+            { id = CycleId id
+            , plan = plan
+            , do = do
+            , check = check
+            , act = act
+            }
         )
+        Api.Object.Cycle.id
+        Api.Object.Cycle.plan
+        Api.Object.Cycle.do
+        Api.Object.Cycle.check
+        Api.Object.Cycle.act

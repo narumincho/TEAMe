@@ -41,6 +41,7 @@ module Data exposing
 import Api.Enum.Role
 import Api.Mutation
 import Api.Object
+import Api.Object.Cycle
 import Api.Object.Team
 import Api.Object.UserData
 import Api.Query
@@ -188,7 +189,21 @@ type Player
         , goal : String
         , teamId : TeamId
         , createdAt : Time.Posix
+        , cycleList : List Cycle
         }
+
+
+type CycleId
+    = CycleId String
+
+
+type alias Cycle =
+    { id : CycleId
+    , plan : String
+    , do : String
+    , check : String
+    , act : String
+    }
 
 
 playerGetName : Player -> String
@@ -328,8 +343,8 @@ teamDataQuery =
 
 userDataQuery : Graphql.SelectionSet.SelectionSet UserData Api.Object.UserData
 userDataQuery =
-    Graphql.SelectionSet.map7
-        (\id name imageFileHash goal teamId createdAt roleMaybe ->
+    Graphql.SelectionSet.map8
+        (\id name imageFileHash goal teamId createdAt roleMaybe cycleList ->
             case roleMaybe of
                 Just Api.Enum.Role.Manager ->
                     RoleManager
@@ -352,6 +367,7 @@ userDataQuery =
                             , goal = goal
                             , teamId = TeamId teamId
                             , createdAt = timePosixFromGraphQLScalaValue createdAt
+                            , cycleList = cycleList
                             }
                         )
 
@@ -372,3 +388,20 @@ userDataQuery =
         )
         Api.Object.UserData.createdAt
         Api.Object.UserData.role
+        (Api.Object.UserData.cycleList
+            (Graphql.SelectionSet.map5
+                (\id plan do check act ->
+                    { id = CycleId id
+                    , plan = plan
+                    , do = do
+                    , check = check
+                    , act = act
+                    }
+                )
+                Api.Object.Cycle.id
+                Api.Object.Cycle.plan
+                Api.Object.Cycle.do
+                Api.Object.Cycle.check
+                Api.Object.Cycle.act
+            )
+        )

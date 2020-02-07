@@ -73,3 +73,17 @@ type alias TeamRequiredArguments =
 team : TeamRequiredArguments -> SelectionSet decodesTo Api.Object.Team -> SelectionSet decodesTo RootQuery
 team requiredArgs object_ =
     Object.selectionForCompositeField "team" [ Argument.required "id" requiredArgs.id Encode.string ] object_ identity
+
+
+type alias CycleRequiredArguments =
+    { id : String }
+
+
+{-| Cycleのデータ
+
+  - id - CycleのId
+
+-}
+cycle : CycleRequiredArguments -> SelectionSet decodesTo Api.Object.Cycle -> SelectionSet decodesTo RootQuery
+cycle requiredArgs object_ =
+    Object.selectionForCompositeField "cycle" [ Argument.required "id" requiredArgs.id Encode.string ] object_ identity

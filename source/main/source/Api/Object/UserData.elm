@@ -67,3 +67,10 @@ createdAt =
 team : SelectionSet decodesTo Api.Object.Team -> SelectionSet decodesTo Api.Object.UserData
 team object_ =
     Object.selectionForCompositeField "team" [] object_ identity
+
+
+{-| 作ったサイクル
+-}
+cycleList : SelectionSet decodesTo Api.Object.Cycle -> SelectionSet (List decodesTo) Api.Object.UserData
+cycleList object_ =
+    Object.selectionForCompositeField "cycleList" [] object_ (identity >> Decode.list)

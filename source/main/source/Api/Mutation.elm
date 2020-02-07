@@ -99,3 +99,26 @@ type alias UpdateTeamGoalRequiredArguments =
 updateTeamGoal : UpdateTeamGoalRequiredArguments -> SelectionSet decodesTo Api.Object.Team -> SelectionSet decodesTo RootMutation
 updateTeamGoal requiredArgs object_ =
     Object.selectionForCompositeField "updateTeamGoal" [ Argument.required "accessToken" requiredArgs.accessToken Encode.string, Argument.required "goal" requiredArgs.goal Encode.string ] object_ identity
+
+
+type alias CreateCycleRequiredArguments =
+    { accessToken : String
+    , plan : String
+    , do : String
+    , check : String
+    , act : String
+    }
+
+
+{-| 新しいCycleを作成する
+
+  - accessToken - アクセストークン
+  - plan - Plan
+  - do - Do
+  - check - Check
+  - act - Act
+
+-}
+createCycle : CreateCycleRequiredArguments -> SelectionSet decodesTo Api.Object.Cycle -> SelectionSet decodesTo RootMutation
+createCycle requiredArgs object_ =
+    Object.selectionForCompositeField "createCycle" [ Argument.required "accessToken" requiredArgs.accessToken Encode.string, Argument.required "plan" requiredArgs.plan Encode.string, Argument.required "do" requiredArgs.do Encode.string, Argument.required "check" requiredArgs.check Encode.string, Argument.required "act" requiredArgs.act Encode.string ] object_ identity

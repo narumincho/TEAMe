@@ -5,6 +5,10 @@
 module Api.Object exposing (..)
 
 
+type Cycle
+    = Cycle
+
+
 type Team
     = Team
 

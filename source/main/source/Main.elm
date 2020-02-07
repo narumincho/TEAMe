@@ -68,6 +68,16 @@ type MainModel
     = NoLogIn NoLogInData
     | WaitUser WaitUserData
     | NotSelectedRole NotSelectedRoleData
+    | ManagerWaitTeamData
+        { accessToken : Data.AccessToken
+        , manager : Data.Manager
+        , pageLocation : PageLocation.PageLocation
+        }
+    | PlayerLogInWaitTeamData
+        { accessToken : Data.AccessToken
+        , player : Data.Player
+        , pageLocation : PageLocation.PageLocation
+        }
     | ManagerLogIn ManagerLogInData
     | PlayerLogIn PlayerLogInData
 
@@ -107,6 +117,7 @@ type alias ManagerLogInData =
     { accessToken : Data.AccessToken
     , manager : Data.Manager
     , pageModel : ManagerPageModel
+    , team : Data.TeamData
     }
 
 
@@ -114,6 +125,7 @@ type alias PlayerLogInData =
     { accessToken : Data.AccessToken
     , player : Data.Player
     , pageModel : PlayerPageModel
+    , team : Data.TeamData
     }
 
 
@@ -153,6 +165,7 @@ type Message
     | SelectTeam Data.TeamId
     | JoinTeamResponse (Result (Graphql.Http.Error Data.UserData) Data.UserData)
     | LogInSampleUser Data.AccessToken
+    | TeamResponse (Result (Graphql.Http.Error Data.TeamData) Data.TeamData)
 
 
 type alias Flag =
@@ -322,6 +335,84 @@ update message (Model rec) =
                     , cmd
                     )
 
+                ManagerWaitTeamData waitTeamData ->
+                    case message of
+                        TeamResponse (Ok teamData) ->
+                            let
+                                ( pageModel, subCommand ) =
+                                    pageLocationToInitManagerPageModel waitTeamData.manager waitTeamData.pageLocation
+                            in
+                            ( Model
+                                { rec
+                                    | mainModel =
+                                        ManagerLogIn
+                                            { accessToken = waitTeamData.accessToken
+                                            , manager =
+                                                subCommand
+                                                    |> SubCommand.getUser
+                                                    |> Maybe.andThen Data.userGetManager
+                                                    |> Maybe.withDefault waitTeamData.manager
+                                            , pageModel = pageModel
+                                            , team =
+                                                subCommand
+                                                    |> SubCommand.getTeam
+                                                    |> Maybe.withDefault teamData
+                                            }
+                                    , notificationList = "ログインに成功!" :: SubCommand.getNotificationList subCommand
+                                }
+                            , subCommandToCommandWithSetTextCommand subCommand
+                            )
+
+                        TeamResponse (Err _) ->
+                            ( Model
+                                { rec | notificationList = rec.notificationList ++ [ "チームの情報取得に失敗しました" ] }
+                            , Cmd.none
+                            )
+
+                        _ ->
+                            ( Model rec
+                            , Cmd.none
+                            )
+
+                PlayerLogInWaitTeamData waitTeamData ->
+                    case message of
+                        TeamResponse (Ok teamData) ->
+                            let
+                                ( pageModel, subCommand ) =
+                                    pageLocationToInitPlayerPageModel waitTeamData.player waitTeamData.pageLocation
+                            in
+                            ( Model
+                                { rec
+                                    | mainModel =
+                                        PlayerLogIn
+                                            { accessToken = waitTeamData.accessToken
+                                            , player =
+                                                subCommand
+                                                    |> SubCommand.getUser
+                                                    |> Maybe.andThen Data.userGetPlayer
+                                                    |> Maybe.withDefault waitTeamData.player
+                                            , pageModel = pageModel
+                                            , team =
+                                                subCommand
+                                                    |> SubCommand.getTeam
+                                                    |> Maybe.withDefault teamData
+                                            }
+                                    , notificationList = "ログインに成功!" :: SubCommand.getNotificationList subCommand
+                                }
+                            , subCommandToCommandWithSetTextCommand subCommand
+                            )
+
+                        TeamResponse (Err _) ->
+                            ( Model
+                                { rec | notificationList = rec.notificationList ++ [ "チームの情報取得に失敗しました" ] }
+                            , Cmd.none
+                            )
+
+                        _ ->
+                            ( Model rec
+                            , Cmd.none
+                            )
+
                 ManagerLogIn managerData ->
                     let
                         ( newManagerLogInData, newMessageList, cmd ) =
@@ -424,39 +515,25 @@ responseUserData waitUserData userData =
             )
 
         Data.RoleManager manager ->
-            let
-                ( pageModel, subCommand ) =
-                    pageLocationToInitManagerPageModel manager waitUserData.pageLocation
-            in
-            ( ManagerLogIn
+            ( ManagerWaitTeamData
                 { accessToken = waitUserData.accessToken
-                , manager =
-                    subCommand
-                        |> SubCommand.getUser
-                        |> Maybe.andThen Data.userGetManager
-                        |> Maybe.withDefault manager
-                , pageModel = pageModel
+                , manager = manager
+                , pageLocation = waitUserData.pageLocation
                 }
-            , [ "監督としてログイン成功!" ] ++ SubCommand.getNotificationList subCommand
-            , subCommandToCommandWithSetTextCommand subCommand
+            , [ "監督としてログイン成功!" ]
+            , Graphql.Http.queryRequest Data.apiUrl (Data.getTeam (Data.managerGetTeamId manager))
+                |> Graphql.Http.send TeamResponse
             )
 
         Data.RolePlayer player ->
-            let
-                ( pageModel, subCommand ) =
-                    pageLocationToInitPlayerPageModel player waitUserData.pageLocation
-            in
-            ( PlayerLogIn
+            ( PlayerLogInWaitTeamData
                 { accessToken = waitUserData.accessToken
-                , player =
-                    subCommand
-                        |> SubCommand.getUser
-                        |> Maybe.andThen Data.userGetPlayer
-                        |> Maybe.withDefault player
-                , pageModel = pageModel
+                , player = player
+                , pageLocation = waitUserData.pageLocation
                 }
-            , [ "選手としてログイン成功!" ] ++ SubCommand.getNotificationList subCommand
-            , subCommandToCommandWithSetTextCommand subCommand
+            , [ "選手としてログイン成功!" ]
+            , Graphql.Http.queryRequest Data.apiUrl (Data.getTeam (Data.playerGetTeamId player))
+                |> Graphql.Http.send TeamResponse
             )
 
 
@@ -514,30 +591,11 @@ updateNoSelectedRole message notSelectedRoleData =
         ( CreateTeamResponse response, NotSelectedRoleManager record ) ->
             case response of
                 Ok newUserData ->
-                    case newUserData of
-                        Data.RoleManager managerUser ->
-                            let
-                                ( pageModel, subCommand ) =
-                                    pageLocationToInitManagerPageModel managerUser PageLocation.Top
-                            in
-                            ( ManagerLogIn
-                                { accessToken = record.accessToken
-                                , manager =
-                                    subCommand
-                                        |> SubCommand.getUser
-                                        |> Maybe.andThen Data.userGetManager
-                                        |> Maybe.withDefault managerUser
-                                , pageModel = pageModel
-                                }
-                            , SubCommand.getNotificationList subCommand
-                            , subCommandToCommandWithSetTextCommand subCommand
-                            )
-
-                        _ ->
-                            ( NotSelectedRole (NotSelectedRoleManager { record | creating = False })
-                            , [ "チーム作成時にユーザ情報の変更に失敗しました" ]
-                            , Cmd.none
-                            )
+                    responseUserData
+                        { accessToken = record.accessToken
+                        , pageLocation = PageLocation.Top
+                        }
+                        newUserData
 
                 Err _ ->
                     ( NotSelectedRole (NotSelectedRoleManager { record | creating = False })
@@ -571,30 +629,11 @@ updateNoSelectedRole message notSelectedRoleData =
         ( JoinTeamResponse response, NotSelectedRolePlayer record ) ->
             case response of
                 Ok newUserData ->
-                    case newUserData of
-                        Data.RolePlayer player ->
-                            let
-                                ( pageModel, subCommand ) =
-                                    pageLocationToInitPlayerPageModel player PageLocation.Top
-                            in
-                            ( PlayerLogIn
-                                { accessToken = record.accessToken
-                                , player =
-                                    subCommand
-                                        |> SubCommand.getUser
-                                        |> Maybe.andThen Data.userGetPlayer
-                                        |> Maybe.withDefault player
-                                , pageModel = pageModel
-                                }
-                            , SubCommand.getNotificationList subCommand
-                            , subCommandToCommandWithSetTextCommand subCommand
-                            )
-
-                        _ ->
-                            ( NotSelectedRole (NotSelectedRolePlayer { record | joining = False })
-                            , [ "チーム参加時にユーザ情報の変更に失敗しました" ]
-                            , Cmd.none
-                            )
+                    responseUserData
+                        { accessToken = record.accessToken
+                        , pageLocation = PageLocation.Top
+                        }
+                        newUserData
 
                 Err _ ->
                     ( NotSelectedRole (NotSelectedRolePlayer { record | joining = False })
@@ -784,6 +823,12 @@ view (Model record) =
 
             WaitUser _ ->
                 Html.Styled.text "ユーザーの情報を取得中…"
+
+            ManagerWaitTeamData _ ->
+                Html.Styled.text "チーム情報を取得中……"
+
+            PlayerLogInWaitTeamData _ ->
+                Html.Styled.text "チーム情報を取得中……"
 
             NotSelectedRole notSelectedRoleData ->
                 notSelectedRoleDataView notSelectedRoleData

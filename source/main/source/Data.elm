@@ -16,15 +16,18 @@ module Data exposing
     , fileHashFromGraphQLScalaValue
     , fileHashToUrlAsString
     , getAllTeam
+    , getTeam
     , getUserNameAndImageFileHash
     , getUserPrivateData
     , joinTeamAndSetPlayerRole
     , managerGetGoal
     , managerGetImageFileHash
     , managerGetName
+    , managerGetTeamId
     , playerGetGoal
     , playerGetImageFileHash
     , playerGetName
+    , playerGetTeamId
     , timePosixFromGraphQLScalaValue
     , updatePersonalGoal
     , updateTeamGoal
@@ -152,6 +155,7 @@ type Manager
         , name : String
         , imageFileHash : FileHash
         , goal : String
+        , teamId : TeamId
         , createdAt : Time.Posix
         }
 
@@ -171,12 +175,18 @@ managerGetGoal (Manager { goal }) =
     goal
 
 
+managerGetTeamId : Manager -> TeamId
+managerGetTeamId (Manager { teamId }) =
+    teamId
+
+
 type Player
     = Player
         { id : UserId
         , name : String
         , imageFileHash : FileHash
         , goal : String
+        , teamId : TeamId
         , createdAt : Time.Posix
         }
 
@@ -194,6 +204,11 @@ playerGetImageFileHash (Player { imageFileHash }) =
 playerGetGoal : Player -> String
 playerGetGoal (Player { goal }) =
     goal
+
+
+playerGetTeamId : Player -> TeamId
+playerGetTeamId (Player { teamId }) =
+    teamId
 
 
 type TeamId
@@ -241,6 +256,12 @@ validateTeamName teamName =
 getUserPrivateData : AccessToken -> Graphql.SelectionSet.SelectionSet UserData Graphql.Operation.RootQuery
 getUserPrivateData accessToken =
     Api.Query.userPrivate { accessToken = accessTokenToString accessToken } userDataQuery
+
+
+getTeam : TeamId -> Graphql.SelectionSet.SelectionSet TeamData Graphql.Operation.RootQuery
+getTeam (TeamId teamIdAsString) =
+    Api.Query.team { id = teamIdAsString }
+        teamDataQuery
 
 
 getAllTeam : Graphql.SelectionSet.SelectionSet (List TeamData) Graphql.Operation.RootQuery
@@ -313,8 +334,8 @@ teamDataQuery =
 
 userDataQuery : Graphql.SelectionSet.SelectionSet UserData Api.Object.UserData
 userDataQuery =
-    Graphql.SelectionSet.map6
-        (\id name imageFileHash goal createdAt roleMaybe ->
+    Graphql.SelectionSet.map7
+        (\id name imageFileHash goal teamId createdAt roleMaybe ->
             case roleMaybe of
                 Just Api.Enum.Role.Manager ->
                     RoleManager
@@ -323,6 +344,7 @@ userDataQuery =
                             , name = name
                             , imageFileHash = fileHashFromGraphQLScalaValue imageFileHash
                             , goal = goal
+                            , teamId = TeamId teamId
                             , createdAt = timePosixFromGraphQLScalaValue createdAt
                             }
                         )
@@ -334,6 +356,7 @@ userDataQuery =
                             , name = name
                             , imageFileHash = fileHashFromGraphQLScalaValue imageFileHash
                             , goal = goal
+                            , teamId = TeamId teamId
                             , createdAt = timePosixFromGraphQLScalaValue createdAt
                             }
                         )
@@ -350,5 +373,8 @@ userDataQuery =
         Api.Object.UserData.name
         Api.Object.UserData.imageFileHash
         Api.Object.UserData.goal
+        (Api.Object.UserData.team
+            Api.Object.Team.id
+        )
         Api.Object.UserData.createdAt
         Api.Object.UserData.role

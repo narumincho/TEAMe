@@ -36,7 +36,7 @@ update accessToken teamData message (Model record) =
 
         CancelUpdateGoal ->
             ( Model { record | nextGoal = teamData.goal }
-            , SubCommand.none
+            , SubCommand.setInputText { id = goalInputDomId, text = teamData.goal }
             )
 
         UpdateGoal ->

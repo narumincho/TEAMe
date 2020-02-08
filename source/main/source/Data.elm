@@ -19,6 +19,7 @@ module Data exposing
     , fileHashToUrlAsString
     , getAllTeam
     , getTeam
+    , getUserByUserIdList
     , getUserNameAndImageFileHash
     , getUserPrivateData
     , joinTeamAndSetPlayerRole
@@ -286,6 +287,17 @@ validateTeamName teamName =
 getUserPrivateData : AccessToken -> Graphql.SelectionSet.SelectionSet UserData Graphql.Operation.RootQuery
 getUserPrivateData accessToken =
     Api.Query.userPrivate { accessToken = accessTokenToString accessToken } userDataQuery
+
+
+getUserByUserIdList : List UserId -> Graphql.SelectionSet.SelectionSet (List UserData) Graphql.Operation.RootQuery
+getUserByUserIdList userIdList =
+    Graphql.SelectionSet.list
+        (userIdList
+            |> List.map
+                (\(UserId userIdAsString) ->
+                    Api.Query.user { userId = userIdAsString } userDataQuery
+                )
+        )
 
 
 getTeam : TeamId -> Graphql.SelectionSet.SelectionSet TeamData Graphql.Operation.RootQuery

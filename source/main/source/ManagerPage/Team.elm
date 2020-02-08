@@ -3,13 +3,14 @@ module ManagerPage.Team exposing (Message, Model, init, update, view)
 import Data
 import Graphql.Http
 import Html.Styled as S
+import Maybe.Extra
 import PageLocation
 import Style
 import SubCommand
 
 
 type Model
-    = Model { updatingGoal : Bool, nextGoal : String }
+    = Model { updatingGoal : Bool, nextGoal : String, playerList : Maybe (List Data.Player) }
 
 
 type Message
@@ -17,12 +18,18 @@ type Message
     | CancelUpdateGoal
     | UpdateGoal
     | UpdateGoalResponse (Result (Graphql.Http.Error Data.TeamData) Data.TeamData)
+    | TeamUserResponse (Result (Graphql.Http.Error (List Data.UserData)) (List Data.UserData))
 
 
 init : Data.TeamData -> ( Model, SubCommand.SubCommand Message )
 init teamData =
-    ( Model { updatingGoal = False, nextGoal = teamData.goal }
-    , SubCommand.setInputText { id = goalInputDomId, text = teamData.goal }
+    ( Model { updatingGoal = False, nextGoal = teamData.goal, playerList = Nothing }
+    , SubCommand.batch
+        [ SubCommand.setInputText { id = goalInputDomId, text = teamData.goal }
+        , Graphql.Http.queryRequest Data.apiUrl (Data.getUserByUserIdList teamData.playerIdList)
+            |> Graphql.Http.send TeamUserResponse
+            |> SubCommand.addCommand
+        ]
     )
 
 
@@ -66,6 +73,21 @@ update accessToken teamData message (Model record) =
                     , SubCommand.addNotification "指導目標の変更に失敗しました"
                     )
 
+        TeamUserResponse response ->
+            case response of
+                Ok playerList ->
+                    ( Model
+                        { record
+                            | playerList = playerList |> List.map Data.userGetPlayer |> Maybe.Extra.values |> Just
+                        }
+                    , SubCommand.none
+                    )
+
+                Err _ ->
+                    ( Model record
+                    , SubCommand.addNotification "チームのメンバー取得に失敗しました"
+                    )
+
 
 view : Data.Manager -> Data.TeamData -> Model -> S.Html Message
 view manager teamData (Model record) =
@@ -97,6 +119,42 @@ mainView teamData (Model record) =
                             else
                                 []
                            )
+               )
+            ++ (case record.playerList of
+                    Just playerList ->
+                        playerList
+                            |> List.map
+                                (\player ->
+                                    S.div []
+                                        ([ Style.userImage
+                                            { name = Data.playerGetName player
+                                            , imageFileHash = Data.playerGetImageFileHash player
+                                            }
+                                         , S.div [] [ S.text (Data.playerGetName player) ]
+                                         ]
+                                            ++ (player
+                                                    |> Data.playerGetCycleDataList
+                                                    |> List.map
+                                                        (\cycle ->
+                                                            S.div []
+                                                                [ S.text
+                                                                    ("P="
+                                                                        ++ cycle.plan
+                                                                        ++ " D="
+                                                                        ++ cycle.do
+                                                                        ++ " C="
+                                                                        ++ cycle.check
+                                                                        ++ " A="
+                                                                        ++ cycle.act
+                                                                    )
+                                                                ]
+                                                        )
+                                               )
+                                        )
+                                )
+
+                    Nothing ->
+                        [ S.div [] [ S.text "選手の情報を読込中" ] ]
                )
         )
 

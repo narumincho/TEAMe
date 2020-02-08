@@ -142,7 +142,7 @@ cycleEditor : { updating : Bool, plan : String, do : String, check : String, act
 cycleEditor record =
     Style.pageMainViewContainer
         (if record.updating then
-            [ S.div [] [ S.text "作成中……" ] ]
+            [ S.div [] [ S.text "作成中……", Style.loading ] ]
 
          else
             [ S.table

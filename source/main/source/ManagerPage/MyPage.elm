@@ -86,7 +86,7 @@ mainView manager (Model record) =
         ([ Style.goalTitle "指導目標"
          ]
             ++ (if record.updatingGoal then
-                    [ S.div [] [ S.text "指導目標を変更中……" ] ]
+                    [ S.div [] [ S.text "指導目標を変更中……" ], Style.loading ]
 
                 else
                     [ Style.inputText goalInputDomId "goal" InputGoal ]

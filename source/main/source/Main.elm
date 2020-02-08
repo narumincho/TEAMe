@@ -776,10 +776,18 @@ view (Model record) =
                 Html.Styled.text "ユーザーの情報を取得中…"
 
             ManagerWaitTeamData _ ->
-                Html.Styled.text "チーム情報を取得中……"
+                Html.Styled.div
+                    []
+                    [ Html.Styled.text "チーム情報を取得中……"
+                    , Style.loading
+                    ]
 
             PlayerLogInWaitTeamData _ ->
-                Html.Styled.text "チーム情報を取得中……"
+                Html.Styled.div
+                    []
+                    [ Html.Styled.text "チーム情報を取得中……"
+                    , Style.loading
+                    ]
 
             NotSelectedRole notSelectedRoleData ->
                 notSelectedRoleDataView notSelectedRoleData
@@ -911,7 +919,7 @@ createTeamView creating teamName =
             ]
         ]
         (if creating then
-            [ Html.Styled.div [] [ Html.Styled.text "チームを作成中……" ] ]
+            [ Html.Styled.div [] [ Html.Styled.text "チームを作成中……", Style.loading ] ]
 
          else
             [ Html.Styled.div [] [ Html.Styled.text "監督はまず、チームをつくります。チーム名は?" ]
@@ -950,7 +958,7 @@ joinTeamView noRoleUser teamListMaybe joining =
                                 )
 
                     Nothing ->
-                        [ Html.Styled.text "チーム一覧を取得中……" ]
+                        [ Html.Styled.text "チーム一覧を取得中……", Style.loading ]
                 )
             ]
         )

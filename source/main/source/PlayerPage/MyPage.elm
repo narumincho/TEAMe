@@ -87,7 +87,7 @@ mainView player (Model record) =
         ([ Style.goalTitle "個人目標"
          ]
             ++ (if record.updatingGoal then
-                    [ S.div [] [ S.text "個人目標を変更中……" ] ]
+                    [ S.div [] [ S.text "個人目標を変更中……",Style.loading ] ]
 
                 else
                     [ Style.inputText goalInputDomId "goal" InputGoal ]

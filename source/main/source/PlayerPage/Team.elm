@@ -104,7 +104,7 @@ mainView teamData (Model record) =
         ([ Style.goalTitle "チーム目標"
          ]
             ++ (if record.updatingGoal then
-                    [ S.div [] [ S.text "チーム目標を変更中……" ] ]
+                    [ S.div [] [ S.text "チーム目標を変更中……" ], Style.loading ]
 
                 else
                     [ Style.inputText goalInputDomId "goal" InputGoal ]
@@ -154,7 +154,7 @@ mainView teamData (Model record) =
                                 )
 
                     Nothing ->
-                        [ S.div [] [ S.text "選手の情報を読込中" ] ]
+                        [ S.div [] [ S.text "選手の情報を読込中" ], Style.loading ]
                )
         )
 

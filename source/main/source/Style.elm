@@ -1,6 +1,7 @@
-module Style exposing (alignContentEnd, alignContentStart, animationFillModeForwards, conditionButton, displayGrid, gap, goalTitle, gridAutoFlowColumn, gridCell, header, inputText, managerBottomNavigation, normalButton, pageContainer, pageMainViewContainer, playerBottomNavigation, themeColor, userImage)
+module Style exposing (alignContentEnd, alignContentStart, animationFillModeForwards, conditionButton, displayGrid, gap, goalTitle, gridAutoFlowColumn, gridCell, header, inputText, loading, managerBottomNavigation, normalButton, pageContainer, pageMainViewContainer, playerBottomNavigation, themeColor, userImage)
 
 import Css
+import Css.Animations
 import Css.Transitions
 import Data
 import Html.Styled as S
@@ -225,6 +226,35 @@ goalTitle text =
             ]
         ]
         [ S.text text ]
+
+
+loading : S.Html msg
+loading =
+    S.div
+        [ A.css
+            [ Css.borderRadius (Css.pct 50)
+            , Css.width (Css.px 32)
+            , Css.height (Css.px 32)
+            , Css.border3 (Css.px 3) Css.solid (Css.rgb 0 0 0)
+            , Css.borderRightColor Css.transparent
+            , Css.animationName
+                (Css.Animations.keyframes
+                    [ ( 100, [ Css.Animations.transform [ Css.rotate (Css.turn 1) ] ] ) ]
+                )
+            , Css.animationIterationCount infinite
+            , Css.animationDuration (Css.sec 0.6)
+            , Css.property "animation-timing-function" "linear"
+            ]
+        ]
+        []
+
+
+infinite =
+    let
+        a =
+            Css.int 0
+    in
+    { a | value = "infinite" }
 
 
 displayGrid : Css.Style

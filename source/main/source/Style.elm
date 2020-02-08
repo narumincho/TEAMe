@@ -22,6 +22,7 @@ pageContainer =
             , Css.height (Css.pct 100)
             , gridCellHeightList [ "max-content", "1fr", "max-content" ]
             , gridCell { x = 0, y = 0, width = 1, height = 1 }
+            , Css.overflow Css.auto
             ]
         ]
 
@@ -66,6 +67,7 @@ pageMainViewContainer =
             , alignContentStart
             , Css.backgroundColor (Css.rgb 246 252 240)
             , gap 8
+            , Css.overflow Css.auto
             ]
         ]
 

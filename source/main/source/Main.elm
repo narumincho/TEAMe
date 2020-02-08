@@ -722,7 +722,7 @@ updatePlayer message logInData =
                 |> playerUpdateLogInDataAndCommandFromSubCommand logInData
 
         ( MessagePlayerNote pageMessage, PagePlayerNote pageModel ) ->
-            PlayerPage.Note.update pageMessage pageModel
+            PlayerPage.Note.update logInData.accessToken logInData.player pageMessage pageModel
                 |> Tuple.mapBoth PagePlayerNote (SubCommand.map MessagePlayerNote)
                 |> playerUpdateLogInDataAndCommandFromSubCommand logInData
 
@@ -976,7 +976,7 @@ playerLogInView logInData =
                 |> Html.Styled.map MessagePlayerMyPage
 
         PagePlayerNote model ->
-            PlayerPage.Note.view model
+            PlayerPage.Note.view logInData.player model
                 |> Html.Styled.map MessagePlayerNote
 
         PagePlayerTeam model ->

@@ -1,5 +1,6 @@
 module Data exposing
     ( AccessToken
+    , CycleData
     , FileHash
     , Manager
     , NoRoleUser
@@ -25,6 +26,8 @@ module Data exposing
     , managerGetImageFileHash
     , managerGetName
     , managerGetTeamId
+    , playerAddCycle
+    , playerGetCycleDataList
     , playerGetGoal
     , playerGetImageFileHash
     , playerGetName
@@ -207,6 +210,12 @@ type alias CycleData =
     }
 
 
+playerAddCycle : CycleData -> Player -> Player
+playerAddCycle cycleData (Player record) =
+    Player
+        { record | cycleList = record.cycleList ++ [ cycleData ] }
+
+
 playerGetName : Player -> String
 playerGetName (Player { name }) =
     name
@@ -225,6 +234,11 @@ playerGetGoal (Player { goal }) =
 playerGetTeamId : Player -> TeamId
 playerGetTeamId (Player { teamId }) =
     teamId
+
+
+playerGetCycleDataList : Player -> List CycleData
+playerGetCycleDataList (Player { cycleList }) =
+    cycleList
 
 
 type TeamId

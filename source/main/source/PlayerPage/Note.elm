@@ -8,6 +8,7 @@ import Html.Styled.Attributes
 import PageLocation
 import Style
 import SubCommand
+import Time
 
 
 type Model
@@ -91,21 +92,21 @@ init player =
     )
 
 
-view : Data.Player -> Model -> S.Html Message
-view player model =
+view : Time.Zone -> Data.Player -> Model -> S.Html Message
+view timeZone player model =
     Style.pageContainer
         [ Style.header (Just (Data.RolePlayer player))
-        , mainView player model
+        , mainView timeZone player model
         , Style.playerBottomNavigation PageLocation.PlayerNote
         ]
 
 
-mainView : Data.Player -> Model -> S.Html Message
-mainView player model =
+mainView : Time.Zone -> Data.Player -> Model -> S.Html Message
+mainView timeZone player model =
     case model of
         View ->
             Style.pageMainViewContainer
-                ((player |> Data.playerGetCycleDataList |> List.map cycleView)
+                ((player |> Data.playerGetCycleDataList |> List.map (cycleView timeZone))
                     ++ [ Style.normalButton CreateNewCycle "新しいCycleを作成"
                        ]
                 )
@@ -114,8 +115,8 @@ mainView player model =
             cycleEditor cycleData
 
 
-cycleView : Data.CycleData -> S.Html Message
-cycleView cycleData =
+cycleView : Time.Zone -> Data.CycleData -> S.Html Message
+cycleView timeZone cycleData =
     S.div
         [ Html.Styled.Attributes.css
             [ Css.padding (Css.rem 0.5)
@@ -135,6 +136,7 @@ cycleView cycleData =
             , pdcaTr "C" "気づき" [ S.text cycleData.check ]
             , pdcaTr "A" "改善" [ S.text cycleData.act ]
             ]
+        , S.div [] [ S.text ("作成日時: " ++ Style.timeToString timeZone cycleData.createdAt) ]
         ]
 
 

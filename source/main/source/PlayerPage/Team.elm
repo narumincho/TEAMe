@@ -7,6 +7,7 @@ import Maybe.Extra
 import PageLocation
 import Style
 import SubCommand
+import Time
 
 
 type Model
@@ -89,17 +90,17 @@ update accessToken teamData message (Model record) =
                     )
 
 
-view : Data.Player -> Data.TeamData -> Model -> S.Html Message
-view player teamData (Model record) =
+view : Time.Zone -> Data.Player -> Data.TeamData -> Model -> S.Html Message
+view timeZone player teamData (Model record) =
     Style.pageContainer
         [ Style.header (Just (Data.RolePlayer player))
-        , mainView teamData (Model record)
+        , mainView timeZone teamData (Model record)
         , Style.playerBottomNavigation PageLocation.Team
         ]
 
 
-mainView : Data.TeamData -> Model -> S.Html Message
-mainView teamData (Model record) =
+mainView : Time.Zone -> Data.TeamData -> Model -> S.Html Message
+mainView timeZone teamData (Model record) =
     Style.pageMainViewContainer
         ([ Style.goalTitle "チーム目標"
          ]
@@ -120,42 +121,7 @@ mainView teamData (Model record) =
                                 []
                            )
                )
-            ++ (case record.playerList of
-                    Just playerList ->
-                        playerList
-                            |> List.map
-                                (\player ->
-                                    S.div []
-                                        ([ Style.userImage
-                                            { name = Data.playerGetName player
-                                            , imageFileHash = Data.playerGetImageFileHash player
-                                            }
-                                         , S.div [] [ S.text (Data.playerGetName player) ]
-                                         ]
-                                            ++ (player
-                                                    |> Data.playerGetCycleDataList
-                                                    |> List.map
-                                                        (\cycle ->
-                                                            S.div []
-                                                                [ S.text
-                                                                    ("P="
-                                                                        ++ cycle.plan
-                                                                        ++ " D="
-                                                                        ++ cycle.do
-                                                                        ++ " C="
-                                                                        ++ cycle.check
-                                                                        ++ " A="
-                                                                        ++ cycle.act
-                                                                    )
-                                                                ]
-                                                        )
-                                               )
-                                        )
-                                )
-
-                    Nothing ->
-                        [ S.div [] [ S.text "選手の情報を読込中" ], Style.loading ]
-               )
+            ++ [ Style.teamPlayerListView timeZone record.playerList ]
         )
 
 

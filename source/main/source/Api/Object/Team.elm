@@ -40,6 +40,13 @@ goal =
     Object.selectionForField "String" "goal" [] Decode.string
 
 
+{-| チームの共有事項
+-}
+information : SelectionSet String Api.Object.Team
+information =
+    Object.selectionForField "String" "information" [] Decode.string
+
+
 {-| チームの作成日時
 -}
 createdAt : SelectionSet Api.ScalarCodecs.DateTime Api.Object.Team

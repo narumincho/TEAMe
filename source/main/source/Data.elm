@@ -208,6 +208,7 @@ type alias CycleData =
     , do : String
     , check : String
     , act : String
+    , createdAt : Time.Posix
     }
 
 
@@ -250,6 +251,7 @@ type alias TeamData =
     { id : TeamId
     , name : String
     , goal : String
+    , information : String
     , managerId : UserId
     , playerIdList : List UserId
     , createdAt : Time.Posix
@@ -362,11 +364,12 @@ createCycle accessToken cycleData =
 
 teamDataQuery : Graphql.SelectionSet.SelectionSet TeamData Api.Object.Team
 teamDataQuery =
-    Graphql.SelectionSet.map6
-        (\id name goal managerId playerIdList createdAt ->
+    Graphql.SelectionSet.map7
+        (\id name goal information managerId playerIdList createdAt ->
             { id = TeamId id
             , name = name
             , goal = goal
+            , information = information
             , managerId = UserId managerId
             , playerIdList = playerIdList |> List.map UserId
             , createdAt = timePosixFromGraphQLScalaValue createdAt
@@ -375,6 +378,7 @@ teamDataQuery =
         Api.Object.Team.id
         Api.Object.Team.name
         Api.Object.Team.goal
+        Api.Object.Team.information
         (Api.Object.Team.manager Api.Object.UserData.id)
         (Api.Object.Team.playerList Api.Object.UserData.id)
         Api.Object.Team.createdAt
@@ -432,13 +436,14 @@ userDataQuery =
 
 cycleQuery : Graphql.SelectionSet.SelectionSet CycleData Api.Object.Cycle
 cycleQuery =
-    Graphql.SelectionSet.map5
-        (\id plan do check act ->
+    Graphql.SelectionSet.map6
+        (\id plan do check act createdAt ->
             { id = CycleId id
             , plan = plan
             , do = do
             , check = check
             , act = act
+            , createdAt = timePosixFromGraphQLScalaValue createdAt
             }
         )
         Api.Object.Cycle.id
@@ -446,3 +451,4 @@ cycleQuery =
         Api.Object.Cycle.do
         Api.Object.Cycle.check
         Api.Object.Cycle.act
+        Api.Object.Cycle.createdAt

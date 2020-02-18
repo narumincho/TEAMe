@@ -122,3 +122,28 @@ type alias CreateCycleRequiredArguments =
 createCycle : CreateCycleRequiredArguments -> SelectionSet decodesTo Api.Object.Cycle -> SelectionSet decodesTo RootMutation
 createCycle requiredArgs object_ =
     Object.selectionForCompositeField "createCycle" [ Argument.required "accessToken" requiredArgs.accessToken Encode.string, Argument.required "plan" requiredArgs.plan Encode.string, Argument.required "do" requiredArgs.do Encode.string, Argument.required "check" requiredArgs.check Encode.string, Argument.required "act" requiredArgs.act Encode.string ] object_ identity
+
+
+type alias UpdateCycleRequiredArguments =
+    { accessToken : String
+    , cycleId : String
+    , plan : String
+    , do : String
+    , check : String
+    , act : String
+    }
+
+
+{-| Cycleを更新する
+
+  - accessToken - アクセストークン
+  - cycleId - 更新するCycleのID
+  - plan - Plan
+  - do - Do
+  - check - Check
+  - act - Act
+
+-}
+updateCycle : UpdateCycleRequiredArguments -> SelectionSet decodesTo Api.Object.Cycle -> SelectionSet decodesTo RootMutation
+updateCycle requiredArgs object_ =
+    Object.selectionForCompositeField "updateCycle" [ Argument.required "accessToken" requiredArgs.accessToken Encode.string, Argument.required "cycleId" requiredArgs.cycleId Encode.string, Argument.required "plan" requiredArgs.plan Encode.string, Argument.required "do" requiredArgs.do Encode.string, Argument.required "check" requiredArgs.check Encode.string, Argument.required "act" requiredArgs.act Encode.string ] object_ identity

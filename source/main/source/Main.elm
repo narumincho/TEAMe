@@ -20,6 +20,8 @@ import PlayerPage.Note
 import PlayerPage.Team
 import Style
 import SubCommand
+import Task
+import Time
 import Url
 
 
@@ -61,6 +63,7 @@ type Model
         { mainModel : MainModel
         , navigationKey : Browser.Navigation.Key
         , notificationList : List String
+        , timeZone : Maybe Time.Zone
         }
 
 
@@ -166,6 +169,7 @@ type Message
     | JoinTeamResponse (Result (Graphql.Http.Error Data.UserData) Data.UserData)
     | LogInSampleUser Data.AccessToken
     | TeamResponse (Result (Graphql.Http.Error Data.TeamData) Data.TeamData)
+    | ResponseTimeZone Time.Zone
 
 
 type alias Flag =
@@ -199,6 +203,7 @@ init accessTokenFromLocalStorage url key =
                             { mainModel = logInState
                             , navigationKey = key
                             , notificationList = []
+                            , timeZone = Nothing
                             }
                     )
 
@@ -210,6 +215,7 @@ init accessTokenFromLocalStorage url key =
                             { mainModel = logInState
                             , navigationKey = key
                             , notificationList = []
+                            , timeZone = Nothing
                             }
                     )
 
@@ -222,6 +228,7 @@ init accessTokenFromLocalStorage url key =
                         }
                 , navigationKey = key
                 , notificationList = []
+                , timeZone = Nothing
                 }
             , Cmd.none
             )
@@ -232,6 +239,7 @@ init accessTokenFromLocalStorage url key =
                     [ command
                     , Browser.Navigation.replaceUrl key
                         (PageLocation.toUrlAsString pageLocation)
+                    , Time.here |> Task.perform ResponseTimeZone
                     ]
             )
 
@@ -793,10 +801,10 @@ view (Model record) =
                 notSelectedRoleDataView notSelectedRoleData
 
             ManagerLogIn managerLogInData ->
-                managerLogInView managerLogInData
+                managerLogInView (record.timeZone |> Maybe.withDefault Time.utc) managerLogInData
 
             PlayerLogIn playerLogInData ->
-                playerLogInView playerLogInData
+                playerLogInView (record.timeZone |> Maybe.withDefault Time.utc) playerLogInData
         , notificationView record.notificationList
         ]
             |> List.map Html.Styled.toUnstyled
@@ -964,31 +972,31 @@ joinTeamView noRoleUser teamListMaybe joining =
         )
 
 
-managerLogInView : ManagerLogInData -> Html.Styled.Html Message
-managerLogInView logInData =
+managerLogInView : Time.Zone -> ManagerLogInData -> Html.Styled.Html Message
+managerLogInView timeZone logInData =
     case logInData.pageModel of
         PageManagerMyPage model ->
             ManagerPage.MyPage.view logInData.manager model
                 |> Html.Styled.map MessageManagerMyPage
 
         PageManagerTeam model ->
-            ManagerPage.Team.view logInData.manager logInData.team model
+            ManagerPage.Team.view timeZone logInData.manager logInData.team model
                 |> Html.Styled.map MessageManagerTeam
 
 
-playerLogInView : PlayerLogInData -> Html.Styled.Html Message
-playerLogInView logInData =
+playerLogInView : Time.Zone -> PlayerLogInData -> Html.Styled.Html Message
+playerLogInView timeZone logInData =
     case logInData.pageModel of
         PagePlayerMyPage model ->
             PlayerPage.MyPage.view logInData.player model
                 |> Html.Styled.map MessagePlayerMyPage
 
         PagePlayerNote model ->
-            PlayerPage.Note.view logInData.player model
+            PlayerPage.Note.view timeZone logInData.player model
                 |> Html.Styled.map MessagePlayerNote
 
         PagePlayerTeam model ->
-            PlayerPage.Team.view logInData.player logInData.team model
+            PlayerPage.Team.view timeZone logInData.player logInData.team model
                 |> Html.Styled.map MessagePlayerTeam
 
 

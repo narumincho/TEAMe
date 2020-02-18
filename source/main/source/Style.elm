@@ -1,4 +1,4 @@
-module Style exposing (alignContentEnd, alignContentStart, animationFillModeForwards, conditionButton, displayGrid, gap, goalTitle, gridAutoFlowColumn, gridCell, header, inputText, loading, managerBottomNavigation, multiLineTextBox, normalButton, pageContainer, pageMainViewContainer, playerBottomNavigation, themeColor, userImage)
+module Style exposing (alignContentEnd, alignContentStart, animationFillModeForwards, conditionButton, displayGrid, gap, goalTitle, gridAutoFlowColumn, gridCell, header, inputText, loading, managerBottomNavigation, multiLineTextBox, normalButton, pageContainer, pageMainViewContainer, playerBottomNavigation, teamPlayerListView, themeColor, timeToString, userImage)
 
 import Css
 import Css.Animations
@@ -8,6 +8,7 @@ import Html.Styled as S
 import Html.Styled.Attributes as A
 import Html.Styled.Events as E
 import PageLocation
+import Time
 
 
 themeColor : Css.Color
@@ -336,3 +337,123 @@ objectFixContain =
 animationFillModeForwards : Css.Style
 animationFillModeForwards =
     Css.property "animation-fill-mode" "forwards"
+
+
+teamPlayerListView : Time.Zone -> Maybe (List Data.Player) -> S.Html message
+teamPlayerListView timeZone playerListMaybe =
+    S.div
+        []
+        (case playerListMaybe of
+            Just playerList ->
+                playerList
+                    |> List.map (teamPlayerView timeZone)
+
+            Nothing ->
+                [ S.div [] [ S.text "選手の情報を読込中" ], loading ]
+        )
+
+
+teamPlayerView : Time.Zone -> Data.Player -> S.Html message
+teamPlayerView timeZone player =
+    S.div []
+        ([ S.div
+            [ A.css
+                [ displayGrid
+                , gridAutoFlowColumn
+                , Css.alignItems Css.center
+                , Css.justifyContent Css.start
+                ]
+            ]
+            [ userImage
+                { name = Data.playerGetName player
+                , imageFileHash = Data.playerGetImageFileHash player
+                }
+            , S.div [] [ S.text (Data.playerGetName player) ]
+            ]
+         ]
+            ++ (player
+                    |> Data.playerGetCycleDataList
+                    |> List.map
+                        (\cycle ->
+                            S.div
+                                [ A.css
+                                    [ Css.padding (Css.rem 1) ]
+                                ]
+                                [ pdcaItem "P" cycle.plan
+                                , pdcaItem "D" cycle.do
+                                , pdcaItem "C" cycle.check
+                                , pdcaItem "A" cycle.act
+                                , S.div [] [ S.text (timeToString timeZone cycle.createdAt) ]
+                                ]
+                        )
+               )
+        )
+
+
+timeToString : Time.Zone -> Time.Posix -> String
+timeToString zone posix =
+    String.fromInt (Time.toYear zone posix)
+        ++ "/"
+        ++ String.fromInt (monthToInt (Time.toMonth zone posix))
+        ++ "/"
+        ++ String.fromInt (Time.toDay zone posix)
+        ++ " "
+        ++ String.padLeft 2 '0' (String.fromInt (Time.toHour zone posix))
+        ++ ":"
+        ++ String.padLeft 2 '0' (String.fromInt (Time.toMinute zone posix))
+        ++ ":"
+        ++ String.padLeft 2 '0' (String.fromInt (Time.toMinute zone posix))
+
+
+monthToInt : Time.Month -> Int
+monthToInt month =
+    case month of
+        Time.Jan ->
+            1
+
+        Time.Feb ->
+            2
+
+        Time.Mar ->
+            3
+
+        Time.Apr ->
+            4
+
+        Time.May ->
+            5
+
+        Time.Jun ->
+            6
+
+        Time.Jul ->
+            7
+
+        Time.Aug ->
+            8
+
+        Time.Sep ->
+            9
+
+        Time.Oct ->
+            10
+
+        Time.Nov ->
+            11
+
+        Time.Dec ->
+            12
+
+
+pdcaItem : String -> String -> S.Html message
+pdcaItem title body =
+    S.div
+        [ A.css
+            [ displayGrid
+            , gridAutoFlowColumn
+            , Css.alignItems Css.baseline
+            ]
+        ]
+        [ S.div [ A.css [ Css.fontSize (Css.rem 2) ] ] [ S.text title ]
+        , S.div [] [ S.text body ]
+        ]

@@ -1,4 +1,4 @@
-module Style exposing (alignContentEnd, alignContentStart, animationFillModeForwards, conditionButton, displayGrid, gap, goalTitle, gridAutoFlowColumn, gridCell, header, inputText, loading, managerBottomNavigation, normalButton, pageContainer, pageMainViewContainer, playerBottomNavigation, themeColor, userImage)
+module Style exposing (alignContentEnd, alignContentStart, animationFillModeForwards, conditionButton, displayGrid, gap, goalTitle, gridAutoFlowColumn, gridCell, header, inputText, loading, managerBottomNavigation, multiLineTextBox, normalButton, pageContainer, pageMainViewContainer, playerBottomNavigation, themeColor, userImage)
 
 import Css
 import Css.Animations
@@ -67,7 +67,7 @@ pageMainViewContainer =
             , displayGrid
             , alignContentStart
             , Css.backgroundColor (Css.rgb 246 252 240)
-            , gap 8
+            , gap 0.5
             , Css.overflow Css.auto
             ]
         ]
@@ -213,6 +213,22 @@ inputText id name messageFunction =
         []
 
 
+multiLineTextBox : String -> String -> (String -> message) -> S.Html message
+multiLineTextBox id name messageFunction =
+    S.textarea
+        [ A.id id
+        , A.name name
+        , E.onInput messageFunction
+        , A.css
+            [ Css.width (Css.pct 100)
+            , Css.boxSizing Css.borderBox
+            , Css.height (Css.rem 8)
+            , Css.fontSize (Css.rem 1)
+            ]
+        ]
+        []
+
+
 goalTitle : String -> S.Html message
 goalTitle text =
     S.div
@@ -267,9 +283,9 @@ gridAutoFlowColumn =
     Css.property "grid-auto-flow" "column"
 
 
-gap : Int -> Css.Style
+gap : Float -> Css.Style
 gap number =
-    Css.property "gap" (String.fromInt number ++ "px")
+    Css.property "gap" (String.fromFloat number ++ "rem")
 
 
 gridCellHeightList : List String -> Css.Style

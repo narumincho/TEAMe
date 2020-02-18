@@ -36,6 +36,7 @@ module Data exposing
     , timePosixFromGraphQLScalaValue
     , updatePersonalGoal
     , updateTeamGoal
+    , updateTeamInformation
     , urlAsStringFromGraphQLScalaValue
     , userGetGoal
     , userGetManager
@@ -346,6 +347,15 @@ updateTeamGoal accessToken goal =
     Api.Mutation.updateTeamGoal
         { accessToken = accessTokenToString accessToken
         , goal = goal
+        }
+        teamDataQuery
+
+
+updateTeamInformation : AccessToken -> String -> Graphql.SelectionSet.SelectionSet TeamData Graphql.Operation.RootMutation
+updateTeamInformation accessToken information =
+    Api.Mutation.updateTeamInformation
+        { accessToken = accessTokenToString accessToken
+        , information = information
         }
         teamDataQuery
 

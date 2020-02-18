@@ -101,6 +101,23 @@ updateTeamGoal requiredArgs object_ =
     Object.selectionForCompositeField "updateTeamGoal" [ Argument.required "accessToken" requiredArgs.accessToken Encode.string, Argument.required "goal" requiredArgs.goal Encode.string ] object_ identity
 
 
+type alias UpdateTeamInformationRequiredArguments =
+    { accessToken : String
+    , information : String
+    }
+
+
+{-| チームの共有事項を変更する。変更できるのはチームの指導者か、選手である必要がある
+
+  - accessToken - アクセストークン
+  - information - 共有事項
+
+-}
+updateTeamInformation : UpdateTeamInformationRequiredArguments -> SelectionSet decodesTo Api.Object.Team -> SelectionSet decodesTo RootMutation
+updateTeamInformation requiredArgs object_ =
+    Object.selectionForCompositeField "updateTeamInformation" [ Argument.required "accessToken" requiredArgs.accessToken Encode.string, Argument.required "information" requiredArgs.information Encode.string ] object_ identity
+
+
 type alias CreateCycleRequiredArguments =
     { accessToken : String
     , plan : String

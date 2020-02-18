@@ -197,13 +197,15 @@ inputText id name messageFunction =
         , E.onInput messageFunction
         , A.css
             [ Css.borderRadius (Css.rem 0.5)
-            , Css.border3 (Css.px 4) Css.solid themeColor
+            , Css.border3 (Css.px 3) Css.solid themeColor
             , Css.fontSize (Css.rem 1.5)
             , Css.padding (Css.rem 0.5)
             , Css.outline Css.none
+            , Css.boxSizing Css.borderBox
+            , Css.width (Css.pct 100)
             , Css.focus
                 [ Css.property "box-shadow" "inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(167, 216, 110, 0.6)"
-                , Css.border3 (Css.px 1) Css.solid themeColor
+                , Css.border3 (Css.px 3) Css.solid themeColor
                 ]
             , Css.Transitions.transition
                 [ Css.Transitions.borderColor3 150 0 Css.Transitions.easeInOut

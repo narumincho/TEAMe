@@ -64,9 +64,9 @@ createdAt =
 
 {-| 所属しているチーム
 -}
-team : SelectionSet decodesTo Api.Object.Team -> SelectionSet decodesTo Api.Object.UserData
+team : SelectionSet decodesTo Api.Object.Team -> SelectionSet (Maybe decodesTo) Api.Object.UserData
 team object_ =
-    Object.selectionForCompositeField "team" [] object_ identity
+    Object.selectionForCompositeField "team" [] object_ (identity >> Decode.nullable)
 
 
 {-| 作ったサイクル

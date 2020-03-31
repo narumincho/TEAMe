@@ -397,9 +397,9 @@ teamDataQuery =
 userDataQuery : Graphql.SelectionSet.SelectionSet UserData Api.Object.UserData
 userDataQuery =
     Graphql.SelectionSet.map8
-        (\id name imageFileHash goal teamId createdAt roleMaybe cycleList ->
-            case roleMaybe of
-                Just Api.Enum.Role.Manager ->
+        (\id name imageFileHash goal teamIdMaybe createdAt roleMaybe cycleList ->
+            case ( roleMaybe, teamIdMaybe ) of
+                ( Just Api.Enum.Role.Manager, Just teamId ) ->
                     RoleManager
                         (Manager
                             { id = UserId id
@@ -411,7 +411,7 @@ userDataQuery =
                             }
                         )
 
-                Just Api.Enum.Role.Player ->
+                ( Just Api.Enum.Role.Player, Just teamId ) ->
                     RolePlayer
                         (Player
                             { id = UserId id
@@ -424,7 +424,7 @@ userDataQuery =
                             }
                         )
 
-                Nothing ->
+                ( _, _ ) ->
                     NoRole
                         { id = UserId id
                         , name = name
